@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐝 TGR Team Assistant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #FF6B00;
+      --primary-dark: #CC5500;
+      --secondary: #1a1a2e;
+      --bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --text: #ffffff;
+      --text-muted: #888;
+      --success: #00C853;
+      --danger: #FF1744;
+      --warning: #FFD600;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 10px; }
+    h1 span { color: var(--primary); }
+    .subtitle { text-align: center; color: var(--text-muted); margin-bottom: 30px; }
+    
+    .status-bar {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .status-item {
+      background: var(--card-bg);
+      padding: 15px 25px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .status-dot.online { background: var(--success); }
+    .status-dot.offline { background: var(--danger); }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 25px;
+    }
+    .card h2 { margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+    .card h2 span { font-size: 1.2em; }
+    
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; color: var(--text-muted); }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      background: var(--secondary);
+      border: 2px solid #333;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    
+    .list-item {
+      background: var(--secondary);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .list-item .actions { display: flex; gap: 8px; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    
+    .tab-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 10px 20px;
+      background: var(--secondary);
+      border: none;
+      border-radius: 8px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .tab-btn.active { background: var(--primary); }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      background: var(--primary);
+    }
+    
+    .meeting-card {
+      background: var(--secondary);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      border-left: 4px solid var(--primary);
+    }
+    .meeting-card h4 { margin-bottom: 8px; }
+    .meeting-card .meta { color: var(--text-muted); font-size: 12px; }
+    
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐝 <span>TGR Team Assistant</span></h1>
+    <p class="subtitle">Manage your TGR WhatsApp groups, schedules & broadcasts</p>
+    
+    <div class="status-bar">
+      <div class="status-item">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting...</span>
+      </div>
+      <div class="status-item">
+        📱 <span id="</span> Groups
+      </divgroupCount">0>
+      <div class="status-item">
+        📅 <span id="scheduleCount">0</span> Schedules
+      </div>
+    </div>
+    
+    <div class="tab-buttons">
+      <button class="tab-btn active" onclick="showTab('broadcast')">📢 Broadcast</button>
+      <button class="tab-btn" onclick="showTab('schedule')">📅 Schedule</button>
+      <button class="tab-btn" onclick="showTab('meetings')">📍 Meetings</button>
+      <button class="tab-btn" onclick="showTab('content')">💡 Content</button>
+      <button class="tab-btn" onclick="showTab('groups')">👥 Groups</button>
+      <button class="tab-btn" onclick="showTab('settings')">⚙️ Settings</button>
+    </div>
+    
+    <!-- Broadcast Tab -->
+    <div id="broadcast" class="tab-content active">
+      <div class="card">
+        <h2>📢 Send Broadcast</h2>
+        <div class="form-group">
+          <label>Message to all groups</label>
+          <textarea id="broadcastMessage" placeholder="Type your message here..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="sendBroadcast()">🚀 Send to All Groups</button>
+      </div>
+    </div>
+    
+    <!-- Schedule Tab -->
+    <div id="schedule" class="tab-content">
+      <div class="card">
+        <h2>📅 Schedule a Message</h2>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea id="scheduleMessage" placeholder="Message to send..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Schedule Type</label>
+          <select id="scheduleType">
+            <option value="onetime">One Time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date & Time</label>
+          <input type="datetime-local" id="scheduleDateTime">
+        </div>
+        <button class="btn btn-primary" onclick="addSchedule()">➕ Add Schedule</button>
+        
+        <h3 style="margin-top: 30px;">Active Schedules</h3>
+        <div id="scheduleList"></div>
+      </div>
+    </div>
+    
+    <!-- Meetings Tab -->
+    <div id="meetings" class="tab-content">
+      <div class="card">
+        <h2>📍 Schedule Meeting/Presentation</h2>
+        <div class="form-group">
+          <label>Meeting Title</label>
+          <input type="text" id="meetingTitle" placeholder="e.g., Weekly Team Briefing">
+        </div>
+        <div class="form-group">
+          <label>Meeting Type</label>
+          <select id="meetingType">
+            <option value="zoom">Zoom Meeting</option>
+            <option value="whatsapp">WhatsApp Call</option>
+            <option value="telegram">Telegram Voice Chat</option>
+            <option value="physical">Physical/Offline</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date & Time</label>
+          <input type="datetime-local" id="meetingDateTime">
+        </div>
+        <div class="form-group" id="meetingLinkGroup">
+          <label>Meeting Link (Zoom/Telegram/WhatsApp)</label>
+          <input type="url" id="meetingLink" placeholder="https://...">
+        </div>
+        <div class="form-group" id="meetingLocationGroup" style="display:none;">
+          <label>Location/Address</label>
+          <textarea id="meetingLocation" placeholder="Full address & directions..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Reminder Before</label>
+          <select id="meetingReminder">
+            <option value="30">30 minutes before</option>
+            <option value="60" selected>1 hour before</option>
+            <option value="120">2 hours before</option>
+            <option value="1440">1 day before</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addMeeting()">➕ Schedule Meeting</button>
+        
+        <h3 style="margin-top: 30px;">Upcoming Meetings</h3>
+        <div id="meetingList"></div>
+      </div>
+    </div>
+    
+    <!-- Content Tab -->
+    <div id="content" class="tab-content">
+      <div class="card">
+        <h2>💡 Content Management</h2>
+        
+        <h3>📖 Morning Motivations</h3>
+        <div class="form-group">
+          <textarea id="motivationsInput" placeholder="One motivation per line..."></textarea>
+        </div>
+        
+        <h3>💡 Daily Tips</h3>
+        <div class="form-group">
+          <textarea id="tipsInput" placeholder="One tip per line..."></textarea>
+        </div>
+        
+        <h3>❓ FAQs (Auto-replies)</h3>
+        <div id="faqList"></div>
+        <div class="form-group" style="display:flex;gap:10px;">
+          <input type="text" id="newFaqKey" placeholder="Keywords (e.g., how to register)">
+          <input type="text" id="newFaqAnswer" placeholder="Answer">
+          <button class="btn btn-primary btn-sm" onclick="addFaq()">Add</button>
+        </div>
+        
+        <button class="btn btn-primary" onclick="saveContent()" style="margin-top:20px;">💾 Save Content</button>
+      </div>
+    </div>
+    
+    <!-- Groups Tab -->
+    <div id="groups" class="tab-content">
+      <div class="card">
+        <h2>👥 Connected Groups</h2>
+        <p style="color:var(--text-muted);margin-bottom:20px;">
+          Groups are automatically detected when the bot is added and accepts the invite.
+        </p>
+        <div id="groupList"></div>
+      </div>
+    </div>
+    
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-content">
+      <div class="card">
+        <h2>⚙️ Bot Settings</h2>
+        <div class="form-group">
+          <label>Your WhatsApp Number (for admin commands)</label>
+          <input type="tel" id="adminNumber" placeholder="2348023456789">
+        </div>
+        <div class="form-group">
+          <label>Bot Name</label>
+          <input type="text" id="botName" placeholder="TGR Assistant">
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    let currentContent = {};
+    let currentGroups = [];
+    let currentSchedules = [];
+    
+    // Tab switching
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+    
+    // Load initial data
+    async function loadData() {
+      try {
+        const statusRes = await fetch(API_BASE + '/api/status');
+        const status = await statusRes.json();
+        
+        document.getElementById('statusDot').className = 'status-dot ' + (status.connected ? 'online' : 'offline');
+        document.getElementById('statusText').textContent = status.connected ? 'Online' : 'Offline';
+        document.getElementById('groupCount').textContent = status.groups;
+        document.getElementById('scheduleCount').textContent = status.schedules;
+        
+        const contentRes = await fetch(API_BASE + '/api/content');
+        currentContent = await contentRes.json();
+        
+        document.getElementById('motivationsInput').value = currentContent.morningMotivation.join('\n');
+        document.getElementById('tipsInput').value = currentContent.tips.join('\n');
+        
+        const groupsRes = await fetch(API_BASE + '/api/groups');
+        currentGroups = await groupsRes.json();
+        renderGroups();
+        
+      } catch (e) {
+        console.log('Using local mode');
+      }
+    }
+    
+    // Render groups
+    function renderGroups() {
+      const list = document.getElementById('groupList');
+      if (currentGroups.length === 0) {
+        list.innerHTML = '<p style="color:var(--text-muted)">No groups yet. Add bot to a group to get started.</p>';
+        return;
+      }
+      list.innerHTML = currentGroups.map(g => `
+        <div class="list-item">
+          <span>${g.name}</span>
+          <span class="badge">${g.members || 0} members</span>
+        </div>
+      `).join('');
+    }
+    
+    // Broadcast
+    async function sendBroadcast() {
+      const message = document.getElementById('broadcastMessage').value;
+      if (!message) return alert('Please enter a message');
+      
+      const btn = event.target;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+      
+      try {
+        const res = await fetch(API_BASE + '/api/send', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        alert(`✅ Sent to ${data.groups} groups!`);
+        document.getElementById('broadcastMessage').value = '';
+      } catch (e) {
+        alert('Failed to send. Make sure the bot is running.');
+      }
+      
+      btn.textContent = '🚀 Send to All Groups';
+      btn.disabled = false;
+    }
+    
+    // Schedule
+    async function addSchedule() {
+      const message = document.getElementById('scheduleMessage').value;
+      const type = document.getElementById('scheduleType').value;
+      const time = document.getElementById('scheduleDateTime').value;
+      
+      if (!message || !time) return alert('Please fill all fields');
+      
+      try {
+        await fetch(API_BASE + '/api/schedule', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ message, type, time })
+        });
+        alert('✅ Schedule added!');
+        document.getElementById('scheduleMessage').value = '';
+      } catch (e) {
+        alert('Failed to add schedule');
+      }
+    }
+    
+    // Meeting
+    async function addMeeting() {
+      const title = document.getElementById('meetingTitle').value;
+      const type = document.getElementById('meetingType').value;
+      const time = document.getElementById('meetingDateTime').value;
+      const link = document.getElementById('meetingLink').value;
+      const location = document.getElementById('meetingLocation').value;
+      const reminder = document.getElementById('meetingReminder').value;
+      
+      if (!title || !time) return alert('Please fill required fields');
+      
+      const meeting = { title, type, time, link, location, reminder };
+      
+      // For now, create as scheduled message
+      try {
+        await fetch(API_BASE + '/api/schedule', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ 
+            message: `📍 MEETING: ${title}\n⏰ ${new Date(time).toLocaleString()}\n${link ? '🔗 ' + link : ''}\n${location ? '📍 ' + location : ''}`,
+            time,
+            type: 'onetime'
+          })
+        });
+        alert('✅ Meeting scheduled! Reminders will be sent automatically.');
+      } catch (e) {
+        alert('Failed to schedule meeting');
+      }
+    }
+    
+    // Show/hide meeting fields based on type
+    document.getElementById('meetingType').addEventListener('change', function() {
+      const isPhysical = this.value === 'physical';
+      document.getElementById('meetingLocationGroup').style.display = isPhysical ? 'block' : 'none';
+      document.getElementById('meetingLinkGroup').style.display = isPhysical ? 'none' : 'block';
+    });
+    
+    // Save content
+    async function saveContent() {
+      const motivations = document.getElementById('motivationsInput').value.split('\n').filter(s => s.trim());
+      const tips = document.getElementById('tipsInput').value.split('\n').filter(s => s.trim());
+      
+      try {
+        await fetch(API_BASE + '/api/content', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ morningMotivation: motivations, tips })
+        });
+        alert('✅ Content saved!');
+      } catch (e) {
+        alert('Failed to save content');
+      }
+    }
+    
+    // Save settings
+    async function saveSettings() {
+      const adminNumber = document.getElementById('adminNumber').value;
+      const botName = document.getElementById('botName').value;
+      
+      try {
+        await fetch(API_BASE + '/api/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ adminNumber, botName })
+        });
+        alert('✅ Settings saved!');
+      } catch (e) {
+        alert('Failed to save settings');
+      }
+    }
+    
+    // Initialize
+    loadData();
+  </script>
+</body>
+</html>
