@@ -291,15 +291,6 @@ tgr-assistant/
 
 ---
 
-## Roadmap
-
-- [ ] Fix error handling and add retry queue
-- [ ] Implement rate limiting between messages
-- [ ] Add health check endpoint
-- [ ] Implement session cloud backup
-- [ ] Add rich media support (images, videos)
-- [ ] Add basic auth to dashboard
-
 ---
 
 ## License
