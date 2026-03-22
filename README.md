@@ -48,9 +48,9 @@ This bot connects to WhatsApp using the Baileys library and provides:
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| **Selective Broadcasting** | ❌ Not Done | Cannot select specific groups for a broadcast - sends to ALL |
-| **Add/Remove Groups** | ❌ Not Done | No commands to add or remove groups from the list |
-| **Auto-detect New Groups** | ❌ Not Done | Bot doesn't detect when added to a new group |
+| **Selective Broadcasting** | ✅ Done | `broadcast 1,3,5 Hello` - send to specific groups |
+| **Add/Remove Groups** | ✅ Done | `addgroup`, `removegroup` commands |
+| **Auto-detect New Groups** | ✅ Done | Notifies admin when bot added to new group |
 | **Error Handling** | ❌ Not Done | Broadcast failures are silent - no retry or alerts |
 | **Rate Limiting** | ❌ Not Done | No delay between messages - risk of WhatsApp ban |
 | **Health Check Endpoint** | ❌ Not Done | No `/health` endpoint for monitoring |
@@ -141,26 +141,25 @@ Send these to the bot from your registered admin number:
 | Command | Status | Description |
 |---------|--------|-------------|
 | `broadcast <message>` | ✅ Works | Send message to **ALL** groups |
+| `broadcast 1,3,5 <msg>` | ✅ Works | Send to SPECIFIC groups by index |
+| `broadcast all <message>` | ✅ Works | Explicitly send to all groups |
+| `addgroup <name> <jid>` | ✅ Works | Add a group to the list |
+| `removegroup <number>` | ✅ Works | Remove a group by index |
 | `addmotivation <text>` | ✅ Works | Add new morning motivation |
 | `addtip <text>` | ✅ Works | Add new daily tip |
-| `groups` | ✅ Works | List all tracked groups |
+| `groups` | ✅ Works | List all tracked groups with index |
 | `help` | ✅ Works | Show available commands |
 
 ### ❌ MISSING Commands (Need to Build)
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `broadcast 1,3,5 <msg>` | ❌ Not Done | Send to SPECIFIC groups (not all) |
-| `addgroup <name>` | ❌ Not Done | Add a group to the list |
-| `removegroup <number>` | ❌ Not Done | Remove a group |
 | `schedule <time> <msg>` | ❌ Not Done | Schedule a message |
 | `status` | ❌ Not Done | Show bot status |
 
-### ⚠️ Known Limitation: Group Linking
+### ✅ Auto Group Detection
 
-**Currently:** No automatic detection when bot is added to a group. Groups must be added manually (feature not implemented).
-
-**Planned:** Bot will auto-detect new groups and ask admin to confirm adding them.
+Bot automatically detects when added to a new group and notifies admin.
 
 ---
 
@@ -292,12 +291,11 @@ tgr-assistant/
 
 | # | Issue | Description |
 |---|-------|-------------|
-| 1 | **No Error Handling in Broadcast** | `broadcastToGroups()` fails silently; no retry queue or admin alerts when messages fail |
-| 2 | **No Rate Limiting** | WhatsApp can ban accounts for sending too many messages too quickly; needs delay between sends |
-| 3 | **No Session Backup** | If server dies, you need to re-scan QR code; sessions should be backed up to cloud |
-| 4 | **No Health Check Endpoint** | Railway may kill idle instances; needs `/health` endpoint for monitoring |
-| 5 | **Migrate to Fly.io** | Railway free tier is limited; migrate to Fly.io for persistent 24/7 bot hosting |
-| 6 | **No Group Management** | Cannot add/remove groups or select which groups to broadcast to; need ability to manage AND select specific groups for each broadcast |
+| 1 | **Error Handling** | `broadcastToGroups()` fails silently; needs retry queue + admin alerts |
+| 2 | **Rate Limiting** | WhatsApp can ban for too many messages; needs delay between sends |
+| 3 | **Session Backup** | If server dies, need to re-scan QR; sessions should backup to cloud |
+| 4 | **Health Check Endpoint** | Railway may kill idle instances; needs `/health` for monitoring |
+| 5 | **Migrate to Fly.io** | Railway free tier limited; migrate to Fly.io for 24/7 hosting |
 
 ### Priority 2 - Important
 
