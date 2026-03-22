@@ -55,7 +55,7 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Rate Limiting** | ✅ Done | 2-second delay between messages (configurable) |
 | **Health Check Endpoint** | ✅ Done | `/health` returns status, uptime, connection info |
 | **Session Backup** | ✅ Done | Export/import session via API - no more QR rescans |
-| **Rich Media** | ❌ Not Done | Text only - no images, videos, or documents |
+| **Rich Media** | ✅ Done | Image, video, and document broadcasting via URL |
 | **Dashboard Auth** | ✅ Done | Password protection for dashboard |
 | **Proper Logging** | ❌ Not Done | Only console.log - no structured logging |
 
