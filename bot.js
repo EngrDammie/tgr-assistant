@@ -1,6 +1,7 @@
 /**
  * TGR WhatsApp Assistant Bot
  * Full-featured bot for TGR team management
+ * Now using SQLite for data storage
  */
 
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('baileys');
@@ -10,39 +11,60 @@ const path = require('path');
 const cron = require('node-cron');
 const { v4: uuidv4 } = require('uuid');
 
+// Database module
+const db = require('./database');
+
 const app = express();
 app.use(express.json());
 app.use(express.static('.'));
 
 // Configuration
-const DATA_DIR = path.join(__dirname, 'data');
 const SESSION_DIR = path.join(__dirname, 'sessions');
-const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
-const SCHEDULES_FILE = path.join(DATA_DIR, 'schedules.json');
-const GROUPS_FILE = path.join(DATA_DIR, 'groups.json');
-const CONTENT_FILE = path.join(DATA_DIR, 'content.json');
 
-// Ensure data directories exist
-[DATA_DIR, SESSION_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+// Ensure directories exist
+if (!fs.existsSync(SESSION_DIR)) {
+  fs.mkdirSync(SESSION_DIR, { recursive: true });
+}
 
-// Initialize data files
-const initDataFile = (file, defaultData) => {
-  if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify(defaultData, null, 2));
+// Data variables (will be initialized async)
+let config = {};
+let schedules = [];
+let groups = [];
+let content = { morningMotivation: [], tips: [], faqs: {} };
+
+// Initialize database and load data
+async function initData() {
+  // Initialize database and migrate from JSON if exists
+  await db.initDatabase();
+  db.migrateFromJSON();
+
+  // Load config from SQLite
+  config = db.getAllConfig();
+
+  // Set defaults if not present
+  const defaultConfig = {
+    ownerNumber: null,
+    botName: 'TGR Assistant',
+    adminNumber: null,
+    telegramBotToken: null,
+    messageDelayMs: 2000,
+    dashboardPassword: null
+  };
+
+  for (const [key, value] of Object.entries(defaultConfig)) {
+    if (config[key] === undefined) {
+      config[key] = value;
+      db.setConfig(key, value);
+    }
   }
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-};
 
-let config = initDataFile(CONFIG_FILE, {
-  ownerNumber: null,
-  botName: 'TGR Assistant',
-  adminNumber: null,
-  telegramBotToken: null,
-  messageDelayMs: 2000,  // Default 2 seconds between messages
-  dashboardPassword: null
-});
+  // Load other data from SQLite
+  schedules = db.getSchedules();
+  groups = db.getGroups();
+  content = db.getContent();
+  
+  console.log('✅ Data initialized from SQLite');
+}
 
 // Simple auth middleware
 const requireAuth = (req, res, next) => {
@@ -57,35 +79,25 @@ const requireAuth = (req, res, next) => {
   return res.status(401).json({ error: 'Unauthorized' });
 };
 
-let schedules = initDataFile(SCHEDULES_FILE, []);
-let groups = initDataFile(GROUPS_FILE, []);
-let content = initDataFile(CONTENT_FILE, {
-  morningMotivation: [
-    "🌅 Good Morning TGR Family! Today is another opportunity to win! Remember: Success is not final, failure is not fatal. Keep pushing! 💪",
-    "🌟 Rise and Grind! Your success story starts today. Every recharge = ₦₦₦ in your pocket! Let's go! 🚀",
-    "💰 Good Morning! The wealth is in the network. Keep building, keep growing! TGR go make we rich! 🎯"
-  ],
-  tips: [
-    "💡 TIP: Share your referral link daily! The more people see it, the more they register!",
-    "💡 TIP: Your level 2-10 earnings add up! Help your downlines succeed and watch your commission grow!",
-    "💡 TIP: Fund your wallet with ₦10,000+ to unlock higher transaction limits!",
-    "💡 TIP: The best time to post TGR was yesterday. The next best time is NOW! 📱"
-  ],
-  faqs: {
-    "how to register": "To register: 1. Visit topupandgetreward.com 2. Click Register 3. Use referral ID: DammieOptimus2 4. Choose package & pay",
-    "how to fund wallet": "Fund wallet: 1. Login to TGR 2. Go to Fund Wallet 3. Use Sterling OnePay or manual transfer",
-    "how to buy data": "Buy data: 1. Login 2. Go to Buy Data 3. Enter phone & network 4. Confirm payment"
-  }
-});
-
 let sock = null;
 let isConnected = false;
 
-// Save functions
-const saveConfig = () => fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
-const saveSchedules = () => fs.writeFileSync(SCHEDULES_FILE, JSON.stringify(schedules, null, 2));
-const saveGroups = () => fs.writeFileSync(GROUPS_FILE, JSON.stringify(groups, null, 2));
-const saveContent = () => fs.writeFileSync(CONTENT_FILE, JSON.stringify(content, null, 2));
+// In-memory cache refresh functions (for backward compatibility)
+const refreshData = () => {
+  schedules = db.getSchedules();
+  groups = db.getGroups();
+  content = db.getContent();
+};
+
+// Save functions - now update SQLite directly
+const saveConfig = () => {
+  // Config is saved immediately via setConfig, no-op here for backward compat
+  refreshData();
+};
+
+const saveSchedules = () => refreshData();
+const saveGroups = () => refreshData();
+const saveContent = () => refreshData();
 
 // WhatsApp Connection
 async function connectWA() {
@@ -172,12 +184,15 @@ async function handleMessage(msg) {
 
 // Handle new group detection
 async function handleNewGroup(group) {
-  // Check if group already exists
-  const exists = groups.find(g => g.jid === group.id);
-  if (exists) return;
+  // Check if group already exists in database
+  if (db.groupExists(group.id)) return;
 
   const groupName = group.subject || 'Unknown Group';
   console.log(`🆕 New group detected: ${groupName} (${group.id})`);
+
+  // Add to database
+  db.addGroup(groupName, group.id);
+  refreshData();
 
   // Notify admin
   if (config.adminNumber) {
@@ -330,8 +345,14 @@ async function handleAdminCommand(msg, body) {
         return;
       }
       
-      groups.push({ name, jid: groupJid });
-      saveGroups();
+      // Check if already exists
+      if (db.groupExists(groupJid)) {
+        await sock.sendMessage(jid, { text: '❌ Group already exists!' });
+        return;
+      }
+      
+      db.addGroup(name, groupJid);
+      refreshData();
       await sock.sendMessage(jid, { text: `✅ Group "${name}" added! Total: ${groups.length}` });
     } else {
       await sock.sendMessage(jid, { text: '❌ Usage: addgroup <name> <jid@group.us>\nExample: addgroup TGR Team 123456789-123456@g.us' });
@@ -349,8 +370,8 @@ async function handleAdminCommand(msg, body) {
       return;
     }
     
-    const removed = groups.splice(num - 1, 1)[0];
-    saveGroups();
+    const removed = db.removeGroup(num);
+    refreshData();
     await sock.sendMessage(jid, { text: `✅ Group "${removed.name}" removed! Total: ${groups.length}` });
     return;
   }
@@ -358,8 +379,8 @@ async function handleAdminCommand(msg, body) {
   // Set morning motivation
   if (cmd.startsWith('addmotivation ')) {
     const mot = body.substring(14);
-    content.morningMotivation.push(mot);
-    saveContent();
+    db.addContent('motivation', mot);
+    refreshData();
     await sock.sendMessage(jid, { text: '✅ Motivation added!' });
     return;
   }
@@ -367,8 +388,8 @@ async function handleAdminCommand(msg, body) {
   // Add tip
   if (cmd.startsWith('addtip ')) {
     const tip = body.substring(7);
-    content.tips.push(tip);
-    saveContent();
+    db.addContent('tip', tip);
+    refreshData();
     await sock.sendMessage(jid, { text: '✅ Tip added!' });
     return;
   }
@@ -658,20 +679,11 @@ app.post('/api/schedule', (req, res) => {
   const { message, time, type } = req.body;
   if (!message || !time) return res.status(400).json({ error: 'Message and time required' });
   
-  const schedule = {
-    id: uuidv4(),
-    message,
-    time,
-    type: type || 'onetime',
-    createdAt: new Date().toISOString()
-  };
+  const scheduleId = uuidv4();
+  db.addSchedule(scheduleId, message, time, type || 'onetime');
+  refreshData();
   
-  schedules.push(schedule);
-  saveSchedules();
-  
-  // Parse time and schedule
-  // This is simplified - would need proper cron parsing
-  res.json({ success: true, schedule });
+  res.json({ success: true, schedule: { id: scheduleId, message, time, type: type || 'onetime' } });
 });
 
 app.get('/api/groups', (req, res) => {
@@ -684,34 +696,52 @@ app.post('/api/groups', (req, res) => {
   if (!name || !jid) return res.status(400).json({ error: 'Name and JID required' });
   
   // Check if already exists
-  if (groups.find(g => g.jid === jid)) {
+  if (db.groupExists(jid)) {
     return res.status(400).json({ error: 'Group already exists' });
   }
   
-  groups.push({ name, jid });
-  saveGroups();
+  db.addGroup(name, jid);
+  refreshData();
   res.json({ success: true, groups });
 });
 
 // Remove a group by index (1-based)
 app.delete('/api/groups/:index', (req, res) => {
-  const index = parseInt(req.params.index) - 1; // Convert to 0-based
+  const index = parseInt(req.params.index); // 1-based from URL
   
-  if (isNaN(index) || index < 0 || index >= groups.length) {
+  if (isNaN(index) || index < 1) {
     return res.status(400).json({ error: 'Invalid index' });
   }
   
-  const removed = groups.splice(index, 1)[0];
-  saveGroups();
+  // Get the group at that index
+  const groupList = db.getGroups();
+  if (index > groupList.length) {
+    return res.status(400).json({ error: 'Invalid index' });
+  }
+  
+  const removed = db.removeGroup(index);
+  refreshData();
   res.json({ success: true, removed, groups });
 });
 
 app.post('/api/config', (req, res) => {
-  const { adminNumber, botName, dashboardPassword } = req.body;
-  if (adminNumber) config.adminNumber = adminNumber;
-  if (botName) config.botName = botName;
-  if (dashboardPassword) config.dashboardPassword = dashboardPassword;
-  saveConfig();
+  const { adminNumber, botName, dashboardPassword, messageDelayMs } = req.body;
+  if (adminNumber !== undefined) {
+    config.adminNumber = adminNumber;
+    db.setConfig('adminNumber', adminNumber);
+  }
+  if (botName !== undefined) {
+    config.botName = botName;
+    db.setConfig('botName', botName);
+  }
+  if (dashboardPassword !== undefined) {
+    config.dashboardPassword = dashboardPassword;
+    db.setConfig('dashboardPassword', dashboardPassword);
+  }
+  if (messageDelayMs !== undefined) {
+    config.messageDelayMs = messageDelayMs;
+    db.setConfig('messageDelayMs', messageDelayMs);
+  }
   res.json({ success: true });
 });
 
@@ -721,10 +751,31 @@ app.get('/api/content', (req, res) => {
 
 app.post('/api/content', (req, res) => {
   const { morningMotivation, tips, faqs } = req.body;
-  if (morningMotivation) content.morningMotivation = morningMotivation;
-  if (tips) content.tips = tips;
-  if (faqs) content.faqs = { ...content.faqs, ...faqs };
-  saveContent();
+  
+  // For content, we need to handle differently since it's stored by type
+  // Clear existing and re-add (or we could add a bulk insert)
+  if (morningMotivation && Array.isArray(morningMotivation)) {
+    // Remove existing motivations and add new ones
+    db.deleteContentByType('motivation');
+    for (const m of morningMotivation) {
+      db.addContent('motivation', m);
+    }
+  }
+  
+  if (tips && Array.isArray(tips)) {
+    db.deleteContentByType('tip');
+    for (const t of tips) {
+      db.addContent('tip', t);
+    }
+  }
+  
+  if (faqs && typeof faqs === 'object') {
+    // Store FAQs as JSON
+    db.deleteContentByType('faq');
+    db.addContent('faq', JSON.stringify(faqs));
+  }
+  
+  refreshData();
   res.json({ success: true });
 });
 
@@ -826,6 +877,9 @@ app.post('/api/session/import', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 async function start() {
+  // Initialize data from SQLite first
+  await initData();
+  
   app.listen(PORT, () => {
     console.log(`🌐 Admin API running on port ${PORT}`);
   });
