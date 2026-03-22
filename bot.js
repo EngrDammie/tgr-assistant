@@ -39,7 +39,8 @@ let config = initDataFile(CONFIG_FILE, {
   ownerNumber: null,
   botName: 'TGR Assistant',
   adminNumber: null,
-  telegramBotToken: null
+  telegramBotToken: null,
+  messageDelayMs: 2000  // Default 2 seconds between messages
 });
 
 let schedules = initDataFile(SCHEDULES_FILE, []);
@@ -313,7 +314,10 @@ async function handleAdminCommand(msg, body) {
   });
 }
 
-// Broadcast to all groups or selective groups
+// Helper sleep function
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Broadcast to all groups or selective groups with retry logic and rate limiting
 async function broadcastToGroups(message, targetIndices = null) {
   let targetGroups = groups;
   
@@ -324,15 +328,54 @@ async function broadcastToGroups(message, targetIndices = null) {
   } else {
     console.log(`📢 Broadcasting to all ${groups.length} groups`);
   }
+
+  const results = { success: [], failed: [] };
+  const maxRetries = 3;
+  const delayMs = config.messageDelayMs || 2000;
   
-  for (const group of targetGroups) {
-    try {
-      await sock.sendMessage(group.jid, { text: message });
-      console.log(`📢 Sent to ${group.name}`);
-    } catch (e) {
-      console.log(`❌ Failed to send to ${group.name}: ${e.message}`);
+  for (let i = 0; i < targetGroups.length; i++) {
+    const group = targetGroups[i];
+    let sent = false;
+    
+    // Retry logic with exponential backoff
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await sock.sendMessage(group.jid, { text: message });
+        results.success.push(group.name);
+        console.log(`📢 Sent to ${group.name}`);
+        sent = true;
+        break;
+      } catch (e) {
+        console.log(`⚠️ Attempt ${attempt}/${maxRetries} failed for ${group.name}: ${e.message}`);
+        if (attempt < maxRetries) {
+          const backoffMs = 1000 * attempt; // 1s, 2s, 3s exponential backoff
+          await sleep(backoffMs);
+        }
+      }
+    }
+    
+    if (!sent) {
+      results.failed.push(group.name);
+      console.log(`❌ All retries exhausted for ${group.name}`);
+    }
+    
+    // Rate limiting - delay between messages (skip delay after last message)
+    if (i < targetGroups.length - 1) {
+      await sleep(delayMs);
     }
   }
+  
+  // Report to admin if there were failures
+  if (results.failed.length > 0 && config.adminNumber) {
+    const adminJid = config.adminNumber + '@s.whatsapp.net';
+    const failedList = results.failed.join(', ');
+    await sock.sendMessage(adminJid, {
+      text: `⚠️ Broadcast partial failure!\n\n✅ Sent: ${results.success.length}\n❌ Failed: ${failedList}`
+    });
+    console.log(`📋 Admin notified: ${results.failed.length} groups failed`);
+  }
+  
+  return results;
 }
 
 // Schedule Cron Jobs
@@ -450,6 +493,16 @@ app.post('/api/content', (req, res) => {
 
 app.get('/api/status', (req, res) => {
   res.json({ connected: isConnected, groups: groups.length, schedules: schedules.length });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    connected: isConnected,
+    uptime: process.uptime(),
+    groups: groups.length
+  });
 });
 
 // Start
