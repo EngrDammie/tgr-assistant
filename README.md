@@ -108,15 +108,34 @@ npm start
 
 ## Deployment
 
-### Railway (Recommended)
+### Fly.io (Recommended)
 
-1. Create a new project on [Railway](https://railway.app/new)
-2. Connect your GitHub and select this repository
-3. Add environment variables:
+1. Install Fly CLI and authenticate:
+   ```bash
+   brew install flyctl/flyctl/flyctl
+   fly auth login
    ```
-   PORT = 3000
+
+2. Launch the app:
+   ```bash
+   cd tgr-assistant
+   fly launch
    ```
-4. Deploy!
+
+3. Set environment variables:
+   ```bash
+   fly secrets set PORT=3000
+   ```
+
+4. Deploy:
+   ```bash
+   fly deploy
+   ```
+
+5. Open the app:
+   ```bash
+   fly open
+   ```
 
 ### Docker
 
@@ -295,7 +314,7 @@ tgr-assistant/
 | 2 | **Rate Limiting** | ✅ Done |
 | 3 | **Health Check Endpoint** | ✅ Done |
 | 4 | **Session Backup** | ✅ Done |
-| 5 | **Migrate to Fly.io** | ❌ Pending |
+| 5 | **Migrate to Fly.io** | ✅ Done |
 
 ### Priority 2 - Important
 
@@ -345,6 +364,7 @@ tgr-assistant/
 
 5. **Migrate to Fly.io**
    - Deploy on Fly.io for persistent hosting
+   - ✅ DONE
 
 ### Phase 2: Features (Important)
 *Add rich functionality*
