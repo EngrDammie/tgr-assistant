@@ -268,6 +268,7 @@ tgr-assistant/
 | 2 | **No Rate Limiting** | WhatsApp can ban accounts for sending too many messages too quickly; needs delay between sends |
 | 3 | **No Session Backup** | If server dies, you need to re-scan QR code; sessions should be backed up to cloud |
 | 4 | **No Health Check Endpoint** | Railway may kill idle instances; needs `/health` endpoint for monitoring |
+| 5 | **Migrate to Fly.io** | Railway free tier is limited; migrate to Fly.io for persistent 24/7 bot hosting |
 
 ### Priority 2 - Important
 
