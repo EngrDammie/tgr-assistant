@@ -319,6 +319,10 @@
           <label>Bot Name</label>
           <input type="text" id="botName" placeholder="TGR Assistant">
         </div>
+        <div class="form-group">
+          <label>Dashboard Password (for protecting the web dashboard)</label>
+          <input type="password" id="dashboardPassword" placeholder="Enter a strong password">
+        </div>
         <button class="btn btn-primary" onclick="saveSettings()">💾 Save Settings</button>
       </div>
     </div>
@@ -330,6 +334,22 @@
     let currentGroups = [];
     let currentSchedules = [];
     
+    // Check authentication on page load
+    function checkAuth() {
+      const token = localStorage.getItem('dashboardToken');
+      if (!token) {
+        window.location.href = 'login.html';
+        return false;
+      }
+      return true;
+    }
+    
+    // Get auth header
+    function getAuthHeader() {
+      const token = localStorage.getItem('dashboardToken');
+      return token ? { 'Authorization': token } : {};
+    }
+    
     // Tab switching
     function showTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -340,8 +360,11 @@
     
     // Load initial data
     async function loadData() {
+      if (!checkAuth()) return;
+      
       try {
-        const statusRes = await fetch(API_BASE + '/api/status');
+        const headers = getAuthHeader();
+        const statusRes = await fetch(API_BASE + '/api/status', { headers });
         const status = await statusRes.json();
         
         document.getElementById('statusDot').className = 'status-dot ' + (status.connected ? 'online' : 'offline');
@@ -349,13 +372,13 @@
         document.getElementById('groupCount').textContent = status.groups;
         document.getElementById('scheduleCount').textContent = status.schedules;
         
-        const contentRes = await fetch(API_BASE + '/api/content');
+        const contentRes = await fetch(API_BASE + '/api/content', { headers });
         currentContent = await contentRes.json();
         
         document.getElementById('motivationsInput').value = currentContent.morningMotivation.join('\n');
         document.getElementById('tipsInput').value = currentContent.tips.join('\n');
         
-        const groupsRes = await fetch(API_BASE + '/api/groups');
+        const groupsRes = await fetch(API_BASE + '/api/groups', { headers });
         currentGroups = await groupsRes.json();
         renderGroups();
         
@@ -434,7 +457,7 @@
         
         const res = await fetch(API_BASE + '/api/send', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -462,7 +485,7 @@
       try {
         const res = await fetch(API_BASE + '/api/send', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify({ message, groups: [] }) // Empty groups = all
         });
         const data = await res.json();
@@ -487,7 +510,7 @@
       try {
         await fetch(API_BASE + '/api/schedule', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify({ message, type, time })
         });
         alert('✅ Schedule added!');
@@ -514,7 +537,7 @@
       try {
         await fetch(API_BASE + '/api/schedule', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify({ 
             message: `📍 MEETING: ${title}\n⏰ ${new Date(time).toLocaleString()}\n${link ? '🔗 ' + link : ''}\n${location ? '📍 ' + location : ''}`,
             time,
@@ -542,7 +565,7 @@
       try {
         await fetch(API_BASE + '/api/content', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
           body: JSON.stringify({ morningMotivation: motivations, tips })
         });
         alert('✅ Content saved!');
@@ -555,14 +578,18 @@
     async function saveSettings() {
       const adminNumber = document.getElementById('adminNumber').value;
       const botName = document.getElementById('botName').value;
+      const dashboardPassword = document.getElementById('dashboardPassword').value;
       
       try {
         await fetch(API_BASE + '/api/config', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ adminNumber, botName })
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({ adminNumber, botName, dashboardPassword })
         });
         alert('✅ Settings saved!');
+        if (dashboardPassword) {
+          localStorage.setItem('dashboardToken', dashboardPassword);
+        }
       } catch (e) {
         alert('Failed to save settings');
       }

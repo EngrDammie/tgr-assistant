@@ -40,8 +40,22 @@ let config = initDataFile(CONFIG_FILE, {
   botName: 'TGR Assistant',
   adminNumber: null,
   telegramBotToken: null,
-  messageDelayMs: 2000  // Default 2 seconds between messages
+  messageDelayMs: 2000,  // Default 2 seconds between messages
+  dashboardPassword: null
 });
+
+// Simple auth middleware
+const requireAuth = (req, res, next) => {
+  const token = req.headers.authorization || req.query.token;
+  if (!config.dashboardPassword) {
+    // No password set - allow access (first time setup)
+    return next();
+  }
+  if (token === config.dashboardPassword) {
+    return next();
+  }
+  return res.status(401).json({ error: 'Unauthorized' });
+};
 
 let schedules = initDataFile(SCHEDULES_FILE, []);
 let groups = initDataFile(GROUPS_FILE, []);
@@ -471,9 +485,10 @@ app.delete('/api/groups/:index', (req, res) => {
 });
 
 app.post('/api/config', (req, res) => {
-  const { adminNumber, botName } = req.body;
+  const { adminNumber, botName, dashboardPassword } = req.body;
   if (adminNumber) config.adminNumber = adminNumber;
   if (botName) config.botName = botName;
+  if (dashboardPassword) config.dashboardPassword = dashboardPassword;
   saveConfig();
   res.json({ success: true });
 });
@@ -493,6 +508,19 @@ app.post('/api/content', (req, res) => {
 
 app.get('/api/status', (req, res) => {
   res.json({ connected: isConnected, groups: groups.length, schedules: schedules.length });
+});
+
+// Login endpoint
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  if (!config.dashboardPassword) {
+    return res.status(400).json({ error: 'No password set. Configure dashboardPassword in config.' });
+  }
+  if (password === config.dashboardPassword) {
+    res.json({ success: true, token: config.dashboardPassword });
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
 });
 
 // Health check endpoint

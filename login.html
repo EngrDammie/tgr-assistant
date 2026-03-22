@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔐 TGR Assistant - Login</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #FF6B00;
+      --primary-dark: #CC5500;
+      --bg: #0f0f1a;
+      --card-bg: #1a1a2e;
+      --text: #ffffff;
+      --text-muted: #888;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      background: var(--card-bg);
+      border-radius: 15px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    h1 { margin-bottom: 10px; }
+    h1 span { color: var(--primary); }
+    .subtitle { color: var(--text-muted); margin-bottom: 30px; }
+    
+    .form-group { margin-bottom: 20px; text-align: left; }
+    label { display: block; margin-bottom: 8px; color: var(--text-muted); }
+    input {
+      width: 100%;
+      padding: 14px;
+      background: #0f0f1a;
+      border: 2px solid #333;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 16px;
+    }
+    input:focus { outline: none; border-color: var(--primary); }
+    
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    
+    .error {
+      background: rgba(255, 23, 68, 0.2);
+      border: 1px solid #FF1744;
+      color: #FF1744;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>🐝 <span>TGR Assistant</span></h1>
+    <p class="subtitle">Enter your password to access the dashboard</p>
+    
+    <div id="error" class="error"></div>
+    
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter dashboard password" required>
+      </div>
+      <button type="submit" class="btn btn-primary">🔓 Login</button>
+    </form>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('error');
+      
+      try {
+        const res = await fetch(API_BASE + '/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          // Store token in localStorage
+          localStorage.setItem('dashboardToken', data.token);
+          // Redirect to dashboard
+          window.location.href = 'index.html';
+        } else {
+          errorEl.textContent = data.error || 'Invalid password';
+          errorEl.style.display = 'block';
+        }
+      } catch (e) {
+        errorEl.textContent = 'Connection error. Make sure the bot is running.';
+        errorEl.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
