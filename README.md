@@ -54,7 +54,7 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Error Handling** | ✅ Done | 3 retries with backoff, admin alerts on failure |
 | **Rate Limiting** | ✅ Done | 2-second delay between messages (configurable) |
 | **Health Check Endpoint** | ✅ Done | `/health` returns status, uptime, connection info |
-| **Session Backup** | ❌ Not Done | If server dies, QR code must be re-scanned |
+| **Session Backup** | ✅ Done | Export/import session via API - no more QR rescans |
 | **Rich Media** | ❌ Not Done | Text only - no images, videos, or documents |
 | **Dashboard Auth** | ❌ Not Done | Dashboard is publicly accessible |
 | **Proper Logging** | ❌ Not Done | Only console.log - no structured logging |
@@ -294,7 +294,7 @@ tgr-assistant/
 | 1 | **Error Handling** | ✅ Done |
 | 2 | **Rate Limiting** | ✅ Done |
 | 3 | **Health Check Endpoint** | ✅ Done |
-| 4 | **Session Backup** | ❌ Pending |
+| 4 | **Session Backup** | ✅ Done |
 | 5 | **Migrate to Fly.io** | ❌ Pending |
 
 ### Priority 2 - Important
