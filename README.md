@@ -269,26 +269,27 @@ tgr-assistant/
 | 3 | **No Session Backup** | If server dies, you need to re-scan QR code; sessions should be backed up to cloud |
 | 4 | **No Health Check Endpoint** | Railway may kill idle instances; needs `/health` endpoint for monitoring |
 | 5 | **Migrate to Fly.io** | Railway free tier is limited; migrate to Fly.io for persistent 24/7 bot hosting |
+| 6 | **No Group Management** | Cannot add/remove groups for broadcasts; need commands to manage group list |
 
 ### Priority 2 - Important
 
 | # | Issue | Description |
 |---|-------|-------------|
-| 5 | **Text-Only Messages** | Currently supports text only; should add image/video/document broadcasting |
-| 6 | **Plain JSON Storage** | Using JSON files limits scalability; should migrate to SQLite or PostgreSQL |
-| 7 | **No Proper Logging** | Only console.log; should add structured logging (winston/pino) |
-| 8 | **Dashboard Has No Auth** | The web dashboard (`index.html`) is publicly accessible; needs login protection |
+| 7 | **Text-Only Messages** | Currently supports text only; should add image/video/document broadcasting |
+| 8 | **Plain JSON Storage** | Using JSON files limits scalability; should migrate to SQLite or PostgreSQL |
+| 9 | **No Proper Logging** | Only console.log; should add structured logging (winston/pino) |
+| 10 | **Dashboard Has No Auth** | The web dashboard (`index.html`) is publicly accessible; needs login protection |
 
 ### Priority 3 - Nice to Have
 
 | # | Feature | Description |
 |---|---------|-------------|
-| 9 | **Interactive Messages** | Use Baileys buttons/lists for better user experience |
-| 10 | **Message Templates** | Pre-built rich messages for common broadcasts |
-| 11 | **Analytics Dashboard** | Track message delivery, group engagement |
-| 12 | **Multi-Admin Support** | Allow multiple admin numbers |
-| 13 | **Telegram Integration** | Bridge WhatsApp groups to Telegram |
-| 14 | **Voice Notes** | Support audio broadcasting |
+| 11 | **Interactive Messages** | Use Baileys buttons/lists for better user experience |
+| 12 | **Message Templates** | Pre-built rich messages for common broadcasts |
+| 13 | **Analytics Dashboard** | Track message delivery, group engagement |
+| 14 | **Multi-Admin Support** | Allow multiple admin numbers |
+| 15 | **Telegram Integration** | Bridge WhatsApp groups to Telegram |
+| 16 | **Voice Notes** | Support audio broadcasting |
 
 ---
 
