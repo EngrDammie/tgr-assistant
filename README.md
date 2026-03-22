@@ -58,7 +58,7 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Rich Media** | ✅ Done | Image, video, and document broadcasting via URL |
 | **Dashboard Auth** | ✅ Done | Password protection for dashboard |
 | **SQLite Database** | ✅ Done | Replaced JSON files with SQLite for scalability |
-| **Proper Logging** | ❌ Not Done | Only console.log - needs Winston/Pino |
+| **Proper Logging** | ✅ Done | Structured logging with Pino |
 
 ### 📅 Scheduled Broadcasts (WAT - West Africa Time)
 

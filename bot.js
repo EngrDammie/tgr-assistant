@@ -13,6 +13,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // Database module
 const db = require('./database');
+const logger = require('./logger');
 
 const app = express();
 app.use(express.json());
@@ -63,7 +64,7 @@ async function initData() {
   groups = db.getGroups();
   content = db.getContent();
   
-  console.log('✅ Data initialized from SQLite');
+  logger.info('Data initialized from SQLite');
 }
 
 // Simple auth middleware
@@ -114,11 +115,11 @@ async function connectWA() {
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
-      console.log('📱 QR Code received. Scan with WhatsApp!');
+      logger.info({ qr: true }, 'QR Code received. Scan with WhatsApp!');
     }
     if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode;
-      console.log('Connection closed:', reason);
+      logger.warn({ reason }, 'Connection closed');
       if (reason !== DisconnectReason.loggedOut) {
         connectWA();
       }
