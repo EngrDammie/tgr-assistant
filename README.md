@@ -269,7 +269,7 @@ tgr-assistant/
 | 3 | **No Session Backup** | If server dies, you need to re-scan QR code; sessions should be backed up to cloud |
 | 4 | **No Health Check Endpoint** | Railway may kill idle instances; needs `/health` endpoint for monitoring |
 | 5 | **Migrate to Fly.io** | Railway free tier is limited; migrate to Fly.io for persistent 24/7 bot hosting |
-| 6 | **No Group Management** | Cannot add/remove groups for broadcasts; need commands to manage group list |
+| 6 | **No Group Management** | Cannot add/remove groups or select which groups to broadcast to; need ability to manage AND select specific groups for each broadcast |
 
 ### Priority 2 - Important
 
