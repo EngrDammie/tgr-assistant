@@ -51,9 +51,9 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Selective Broadcasting** | ✅ Done | `broadcast 1,3,5 Hello` - send to specific groups |
 | **Add/Remove Groups** | ✅ Done | `addgroup`, `removegroup` commands |
 | **Auto-detect New Groups** | ✅ Done | Notifies admin when bot added to new group |
-| **Error Handling** | ❌ Not Done | Broadcast failures are silent - no retry or alerts |
-| **Rate Limiting** | ❌ Not Done | No delay between messages - risk of WhatsApp ban |
-| **Health Check Endpoint** | ❌ Not Done | No `/health` endpoint for monitoring |
+| **Error Handling** | ✅ Done | 3 retries with backoff, admin alerts on failure |
+| **Rate Limiting** | ✅ Done | 2-second delay between messages (configurable) |
+| **Health Check Endpoint** | ✅ Done | `/health` returns status, uptime, connection info |
 | **Session Backup** | ❌ Not Done | If server dies, QR code must be re-scanned |
 | **Rich Media** | ❌ Not Done | Text only - no images, videos, or documents |
 | **Dashboard Auth** | ❌ Not Done | Dashboard is publicly accessible |
@@ -289,13 +289,13 @@ tgr-assistant/
 
 ### Priority 1 - Critical
 
-| # | Issue | Description |
-|---|-------|-------------|
-| 1 | **Error Handling** | `broadcastToGroups()` fails silently; needs retry queue + admin alerts |
-| 2 | **Rate Limiting** | WhatsApp can ban for too many messages; needs delay between sends |
-| 3 | **Session Backup** | If server dies, need to re-scan QR; sessions should backup to cloud |
-| 4 | **Health Check Endpoint** | Railway may kill idle instances; needs `/health` for monitoring |
-| 5 | **Migrate to Fly.io** | Railway free tier limited; migrate to Fly.io for 24/7 hosting |
+| # | Issue | Status |
+|---|-------|--------|
+| 1 | **Error Handling** | ✅ Done |
+| 2 | **Rate Limiting** | ✅ Done |
+| 3 | **Health Check Endpoint** | ✅ Done |
+| 4 | **Session Backup** | ❌ Pending |
+| 5 | **Migrate to Fly.io** | ❌ Pending |
 
 ### Priority 2 - Important
 
