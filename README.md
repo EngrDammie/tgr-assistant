@@ -32,17 +32,32 @@ This bot connects to WhatsApp using the Baileys library and provides:
 
 ## Features
 
-### ✅ Implemented
+### ✅ IMPLEMENTED (Currently Working)
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-Device Connection** | WhatsApp session persistence using multi-file auth state |
-| **Broadcast to Groups** | Send messages to all connected WhatsApp groups |
-| **Scheduled Messages** | Auto-send motivation (7am) and tips (12pm, 6pm) WAT |
-| **FAQ Auto-Reply** | Keyword matching for common TGR questions |
-| **Group Tracking** | Store and manage multiple WhatsApp groups |
-| **Web Dashboard** | Admin UI served by Express |
-| **REST API** | Full CRUD for messages, schedules, groups, config |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Multi-Device Connection** | ✅ Done | WhatsApp session persistence using multi-file auth state |
+| **Broadcast to ALL Groups** | ✅ Done | Send messages to all connected WhatsApp groups at once |
+| **Scheduled Messages** | ✅ Done | Auto-send motivation (7am) and tips (12pm, 6pm) WAT |
+| **FAQ Auto-Reply** | ✅ Done | Keyword matching for common TGR questions |
+| **Group Storage** | ✅ Done | Stores group JIDs in JSON file |
+| **Web Dashboard** | ✅ Done | Admin UI served by Express |
+| **REST API** | ✅ Done | Endpoints for send, config, content, groups, schedules |
+
+### ❌ NOT IMPLEMENTED (Planned)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Selective Broadcasting** | ❌ Not Done | Cannot select specific groups for a broadcast - sends to ALL |
+| **Add/Remove Groups** | ❌ Not Done | No commands to add or remove groups from the list |
+| **Auto-detect New Groups** | ❌ Not Done | Bot doesn't detect when added to a new group |
+| **Error Handling** | ❌ Not Done | Broadcast failures are silent - no retry or alerts |
+| **Rate Limiting** | ❌ Not Done | No delay between messages - risk of WhatsApp ban |
+| **Health Check Endpoint** | ❌ Not Done | No `/health` endpoint for monitoring |
+| **Session Backup** | ❌ Not Done | If server dies, QR code must be re-scanned |
+| **Rich Media** | ❌ Not Done | Text only - no images, videos, or documents |
+| **Dashboard Auth** | ❌ Not Done | Dashboard is publicly accessible |
+| **Proper Logging** | ❌ Not Done | Only console.log - no structured logging |
 
 ### 📅 Scheduled Broadcasts (WAT - West Africa Time)
 
@@ -119,23 +134,33 @@ CMD ["npm", "start"]
 
 ## Usage
 
-### WhatsApp Commands (Admin)
+### ✅ CURRENT WhatsApp Commands (Working)
 
 Send these to the bot from your registered admin number:
 
-| Command | Description |
-|---------|-------------|
-| `broadcast <message>` | Send message to all groups |
-| `addmotivation <text>` | Add new morning motivation |
-| `addtip <text>` | Add new daily tip |
-| `groups` | List all connected groups |
-| `help` | Show available commands |
+| Command | Status | Description |
+|---------|--------|-------------|
+| `broadcast <message>` | ✅ Works | Send message to **ALL** groups |
+| `addmotivation <text>` | ✅ Works | Add new morning motivation |
+| `addtip <text>` | ✅ Works | Add new daily tip |
+| `groups` | ✅ Works | List all tracked groups |
+| `help` | ✅ Works | Show available commands |
 
-### Linking a Group
+### ❌ MISSING Commands (Need to Build)
 
-1. Add the bot to your WhatsApp group
-2. Send the group link to the bot
-3. The bot will store the group JID for future broadcasts
+| Command | Status | Description |
+|---------|--------|-------------|
+| `broadcast 1,3,5 <msg>` | ❌ Not Done | Send to SPECIFIC groups (not all) |
+| `addgroup <name>` | ❌ Not Done | Add a group to the list |
+| `removegroup <number>` | ❌ Not Done | Remove a group |
+| `schedule <time> <msg>` | ❌ Not Done | Schedule a message |
+| `status` | ❌ Not Done | Show bot status |
+
+### ⚠️ Known Limitation: Group Linking
+
+**Currently:** No automatic detection when bot is added to a group. Groups must be added manually (feature not implemented).
+
+**Planned:** Bot will auto-detect new groups and ask admin to confirm adding them.
 
 ---
 
@@ -172,9 +197,11 @@ Send these to the bot from your registered admin number:
 
 ### Groups
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/groups` | List all tracked groups |
+| Method | Endpoint | Status | Description |
+|--------|----------|--------|-------------|
+| GET | `/api/groups` | ✅ Works | List all tracked groups |
+| POST | `/api/groups` | ❌ Not Done | Add new group |
+| DELETE | `/api/groups/:id` | ❌ Not Done | Remove group |
 
 ### Content Management
 
@@ -192,9 +219,10 @@ Send these to the bot from your registered admin number:
 
 ### Status
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/status` | Bot connection status |
+| Method | Endpoint | Status | Description |
+|--------|----------|--------|-------------|
+| GET | `/api/status` | ✅ Works | Bot connection status |
+| GET | `/api/health` | ❌ Not Done | Health check for monitoring |
 
 ---
 
@@ -292,6 +320,109 @@ tgr-assistant/
 | 16 | **Voice Notes** | Support audio broadcasting |
 
 ---
+
+## 📍 Detailed Roadmap
+
+### Phase 1: Foundation (Critical)
+*Make the bot reliable and usable*
+
+1. **Group Management** 
+   - Add commands to add/remove groups
+   - Auto-detect when bot is added to new group
+   - **SELECT GROUPS** for each broadcast (not just all)
+   - API: `POST/DELETE /api/groups`
+
+2. **Error Handling**
+   - Retry failed messages (3 attempts)
+   - Alert admin when broadcast fails
+   - Log all failures to file
+
+3. **Rate Limiting**
+   - Add 2-3 second delay between messages
+   - Queue system for broadcasts
+
+4. **Health Check**
+   - Add `/health` endpoint
+   - Return connection status, group count
+
+5. **Migrate to Fly.io**
+   - Deploy on Fly.io for persistent hosting
+
+### Phase 2: Features (Important)
+*Add rich functionality*
+
+6. **Rich Media Support**
+   - Image broadcasting
+   - Video broadcasting
+   - Document sharing
+
+7. **Dashboard Auth**
+   - Basic password protection
+   - Login page
+
+8. **Database Migration**
+   - Move from JSON files to SQLite/PostgreSQL
+   - Better data integrity
+
+9. **Structured Logging**
+   - Use Winston or Pino
+   - Log rotation
+
+### Phase 3: Polish (Nice to Have)
+*Make it premium*
+
+10. **Interactive Messages**
+    - Use WhatsApp buttons
+    - Use WhatsApp lists
+
+11. **Message Templates**
+    - Save reusable messages
+    - Quick-send buttons
+
+12. **Analytics**
+    - Track delivery rates
+    - Group engagement metrics
+
+13. **Multi-Admin**
+    - Multiple admin numbers
+    - Role-based access
+
+14. **Telegram Bridge**
+    - Forward WhatsApp to Telegram
+    - Control bot from Telegram
+
+15. **Voice Notes**
+    - Audio broadcasting
+
+---
+
+## 📊 Current Architecture
+
+```
+                    ┌─────────────────┐
+                    │   WhatsApp      │
+                    │   (Baileys)     │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   bot.js        │
+                    │   (Node.js)     │
+                    └────────┬────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+┌────────▼────────┐  ┌──────▼──────┐  ┌────────▼────────┐
+│  Scheduled Jobs │  │  REST API   │  │  Web Dashboard │
+│  (node-cron)    │  │  (Express)  │  │  (index.html)  │
+└────────┬────────┘  └──────┬──────┘  └────────┬────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   JSON Files   │
+                    │   /data/       │
+                    └─────────────────┘
+```
 
 ---
 
