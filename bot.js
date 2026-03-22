@@ -227,6 +227,93 @@ async function handleAdminCommand(msg, body) {
     return;
   }
 
+  // Image broadcast: image <url> <caption>
+  if (cmd.startsWith('image ')) {
+    const rest = body.substring(6);
+    // Check for selective groups: image 1,3,5 <url> <caption>
+    const selectiveMatch = rest.match(/^(\d+(?:,\d+)*)\s+(.+)$/);
+    
+    let targetIndices = null;
+    let contentStr = rest;
+    
+    if (selectiveMatch) {
+      targetIndices = selectiveMatch[1].split(',').map(n => parseInt(n) - 1);
+      contentStr = selectiveMatch[2];
+    }
+    
+    // Parse URL and caption (last quoted string is caption)
+    const urlMatch = contentStr.match(/(https?:\/\/[^\s]+)\s*(.*)$/);
+    
+    if (urlMatch) {
+      const url = urlMatch[1];
+      const caption = urlMatch[2] || null;
+      
+      await broadcastMediaToGroups('image', url, { caption }, targetIndices);
+      const count = targetIndices ? targetIndices.length : groups.length;
+      await sock.sendMessage(jid, { text: `🖼️ Image sent to ${count} group(s)!` });
+    } else {
+      await sock.sendMessage(jid, { text: '❌ Usage: image <url> <caption>\nExample: image https://example.com/image.jpg Check this out!' });
+    }
+    return;
+  }
+
+  // Video broadcast: video <url> <caption>
+  if (cmd.startsWith('video ')) {
+    const rest = body.substring(6);
+    const selectiveMatch = rest.match(/^(\d+(?:,\d+)*)\s+(.+)$/);
+    
+    let targetIndices = null;
+    let contentStr = rest;
+    
+    if (selectiveMatch) {
+      targetIndices = selectiveMatch[1].split(',').map(n => parseInt(n) - 1);
+      contentStr = selectiveMatch[2];
+    }
+    
+    const urlMatch = contentStr.match(/(https?:\/\/[^\s]+)\s*(.*)$/);
+    
+    if (urlMatch) {
+      const url = urlMatch[1];
+      const caption = urlMatch[2] || null;
+      
+      await broadcastMediaToGroups('video', url, { caption }, targetIndices);
+      const count = targetIndices ? targetIndices.length : groups.length;
+      await sock.sendMessage(jid, { text: `🎬 Video sent to ${count} group(s)!` });
+    } else {
+      await sock.sendMessage(jid, { text: '❌ Usage: video <url> <caption>\nExample: video https://example.com/video.mp4 Check this!' });
+    }
+    return;
+  }
+
+  // Document broadcast: document <url> <filename>
+  if (cmd.startsWith('document ')) {
+    const rest = body.substring(9);
+    const selectiveMatch = rest.match(/^(\d+(?:,\d+)*)\s+(.+)$/);
+    
+    let targetIndices = null;
+    let contentStr = rest;
+    
+    if (selectiveMatch) {
+      targetIndices = selectiveMatch[1].split(',').map(n => parseInt(n) - 1);
+      contentStr = selectiveMatch[2];
+    }
+    
+    // Format: <url> <filename> or just <url> (will auto-generate filename)
+    const urlMatch = contentStr.match(/(https?:\/\/[^\s]+)\s+(.+)$/);
+    
+    if (urlMatch) {
+      const url = urlMatch[1];
+      const fileName = urlMatch[2];
+      
+      await broadcastMediaToGroups('document', url, { fileName }, targetIndices);
+      const count = targetIndices ? targetIndices.length : groups.length;
+      await sock.sendMessage(jid, { text: `📄 Document "${fileName}" sent to ${count} group(s)!` });
+    } else {
+      await sock.sendMessage(jid, { text: '❌ Usage: document <url> <filename>\nExample: document https://example.com/file.pdf Report.pdf' });
+    }
+    return;
+  }
+
   // Add group manually
   // Format: addgroup <name> <jid>
   if (cmd.startsWith('addgroup ')) {
@@ -316,6 +403,11 @@ async function handleAdminCommand(msg, body) {
 📢 broadcast <message> - Send to ALL groups
 📢 broadcast all <message> - Send to ALL groups
 📢 broadcast 1,3,5 <msg> - Send to SELECTED groups
+
+🖼️ image <url> <caption> - Send IMAGE to groups
+🎬 video <url> <caption> - Send VIDEO to groups
+📄 document <url> <file> - Send DOCUMENT to groups
+
 👥 addgroup <name> <jid> - Add group manually
 ❌ removegroup <number> - Remove group by number
 📋 groups - List all groups (with numbers)
@@ -392,6 +484,79 @@ async function broadcastToGroups(message, targetIndices = null) {
   return results;
 }
 
+// Broadcast rich media to groups (reuses broadcast logic structure)
+async function broadcastMediaToGroups(mediaType, mediaUrl, options = {}, targetIndices = null) {
+  let targetGroups = groups;
+  
+  if (targetIndices && Array.isArray(targetIndices)) {
+    targetGroups = targetIndices.map(i => groups[i]).filter(g => g);
+    console.log(`📸 Selective ${mediaType} broadcast to ${targetGroups.length} groups`);
+  } else {
+    console.log(`📸 Broadcasting ${mediaType} to all ${groups.length} groups`);
+  }
+
+  const results = { success: [], failed: [] };
+  const maxRetries = 3;
+  const delayMs = config.messageDelayMs || 2000;
+  
+  // Build message object based on media type
+  const buildMediaMessage = () => {
+    const baseMessage = {};
+    
+    switch (mediaType) {
+      case 'image':
+        return { image: { url: mediaUrl }, caption: options.caption || null };
+      case 'video':
+        return { video: { url: mediaUrl }, caption: options.caption || null };
+      case 'document':
+        return { document: { url: mediaUrl }, fileName: options.fileName || 'document' };
+      default:
+        return { text: 'Unknown media type' };
+    }
+  };
+  
+  for (let i = 0; i < targetGroups.length; i++) {
+    const group = targetGroups[i];
+    let sent = false;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const mediaMessage = buildMediaMessage();
+        await sock.sendMessage(group.jid, mediaMessage);
+        results.success.push(group.name);
+        console.log(`📸 Sent ${mediaType} to ${group.name}`);
+        sent = true;
+        break;
+      } catch (e) {
+        console.log(`⚠️ Attempt ${attempt}/${maxRetries} failed for ${group.name}: ${e.message}`);
+        if (attempt < maxRetries) {
+          const backoffMs = 1000 * attempt;
+          await sleep(backoffMs);
+        }
+      }
+    }
+    
+    if (!sent) {
+      results.failed.push(group.name);
+      console.log(`❌ All retries exhausted for ${group.name}`);
+    }
+    
+    if (i < targetGroups.length - 1) {
+      await sleep(delayMs);
+    }
+  }
+  
+  // Report to admin
+  if (results.failed.length > 0 && config.adminNumber) {
+    const adminJid = config.adminNumber + '@s.whatsapp.net';
+    await sock.sendMessage(adminJid, {
+      text: `⚠️ ${mediaType.toUpperCase()} broadcast partial failure!\n\n✅ Sent: ${results.success.length}\n❌ Failed: ${results.failed.join(', ')}`
+    });
+  }
+  
+  return results;
+}
+
 // Schedule Cron Jobs
 function initSchedules() {
   // Morning motivation - 7 AM WAT (6 AM UTC)
@@ -430,6 +595,63 @@ app.post('/api/send', async (req, res) => {
   await broadcastToGroups(message, targetIndices);
   const count = targetIndices ? targetIndices.length : groups.length;
   res.json({ success: true, groups: count });
+});
+
+// Send image to groups
+app.post('/api/send/image', async (req, res) => {
+  const { url, caption, groups: targetGroups } = req.body;
+  
+  if (!url) return res.status(400).json({ error: 'Image URL required' });
+  
+  let targetIndices = null;
+  if (targetGroups && Array.isArray(targetGroups)) {
+    targetIndices = targetGroups.map(n => n - 1);
+  }
+  
+  try {
+    const results = await broadcastMediaToGroups('image', url, { caption }, targetIndices);
+    res.json({ success: true, sent: results.success.length, failed: results.failed.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send video to groups
+app.post('/api/send/video', async (req, res) => {
+  const { url, caption, groups: targetGroups } = req.body;
+  
+  if (!url) return res.status(400).json({ error: 'Video URL required' });
+  
+  let targetIndices = null;
+  if (targetGroups && Array.isArray(targetGroups)) {
+    targetIndices = targetGroups.map(n => n - 1);
+  }
+  
+  try {
+    const results = await broadcastMediaToGroups('video', url, { caption }, targetIndices);
+    res.json({ success: true, sent: results.success.length, failed: results.failed.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send document to groups
+app.post('/api/send/document', async (req, res) => {
+  const { url, filename, groups: targetGroups } = req.body;
+  
+  if (!url) return res.status(400).json({ error: 'Document URL required' });
+  
+  let targetIndices = null;
+  if (targetGroups && Array.isArray(targetGroups)) {
+    targetIndices = targetGroups.map(n => n - 1);
+  }
+  
+  try {
+    const results = await broadcastMediaToGroups('document', url, { fileName: filename || 'document' }, targetIndices);
+    res.json({ success: true, sent: results.success.length, failed: results.failed.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/schedule', (req, res) => {

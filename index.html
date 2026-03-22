@@ -165,6 +165,7 @@
     
     <div class="tab-buttons">
       <button class="tab-btn active" onclick="showTab('broadcast')">📢 Broadcast</button>
+      <button class="tab-btn" onclick="showTab('media')">🖼️ Media</button>
       <button class="tab-btn" onclick="showTab('schedule')">📅 Schedule</button>
       <button class="tab-btn" onclick="showTab('meetings')">📍 Meetings</button>
       <button class="tab-btn" onclick="showTab('content')">💡 Content</button>
@@ -193,6 +194,52 @@
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-primary" onclick="sendBroadcast()">🚀 Send to Selected</button>
           <button class="btn btn-success" onclick="sendBroadcastToAll()">📢 Send to ALL</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Media Tab -->
+    <div id="media" class="tab-content">
+      <div class="card">
+        <h2>🖼️ Send Media Broadcast</h2>
+        
+        <div class="form-group">
+          <label>Media Type</label>
+          <select id="mediaType" onchange="updateMediaFields()">
+            <option value="image">🖼️ Image</option>
+            <option value="video">🎬 Video</option>
+            <option value="document">📄 Document</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Select Groups</label>
+          <div id="mediaGroupCheckboxes" style="max-height: 150px; overflow-y: auto; background: var(--secondary); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <input type="checkbox" id="mediaSelectAll" onchange="toggleMediaGroups(this)"> 
+              <strong>Select All</strong>
+            </label>
+          </div>
+          <p style="color: var(--text-muted); font-size: 12px;">Leave unchecked to send to ALL groups</p>
+        </div>
+        
+        <div class="form-group">
+          <label>Media URL</label>
+          <input type="url" id="mediaUrl" placeholder="https://example.com/image.jpg">
+        </div>
+        
+        <div class="form-group" id="captionGroup">
+          <label>Caption (optional)</label>
+          <input type="text" id="mediaCaption" placeholder="Add a caption...">
+        </div>
+        
+        <div class="form-group" id="filenameGroup" style="display:none;">
+          <label>Filename</label>
+          <input type="text" id="mediaFilename" placeholder="document.pdf">
+        </div>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="sendMediaBroadcast()">📸 Send Media</button>
         </div>
       </div>
     </div>
@@ -403,6 +450,7 @@
       
       // Also render checkboxes for broadcast
       renderGroupCheckboxes();
+      renderMediaGroupCheckboxes();
     }
     
     // Render group checkboxes for selective broadcast
@@ -430,6 +478,92 @@
       document.querySelectorAll('.group-checkbox').forEach(cb => {
         cb.checked = checkbox.checked;
       });
+    }
+    
+    // Toggle media group checkboxes
+    function toggleMediaGroups(checkbox) {
+      document.querySelectorAll('.media-group-checkbox').forEach(cb => {
+        cb.checked = checkbox.checked;
+      });
+    }
+    
+    // Update media fields based on type
+    function updateMediaFields() {
+      const type = document.getElementById('mediaType').value;
+      document.getElementById('captionGroup').style.display = type !== 'document' ? 'block' : 'none';
+      document.getElementById('filenameGroup').style.display = type === 'document' ? 'block' : 'none';
+    }
+    
+    // Get selected media group indices
+    function getSelectedMediaGroups() {
+      const checkboxes = document.querySelectorAll('.media-group-checkbox:checked');
+      if (checkboxes.length === 0) return null;
+      return Array.from(checkboxes).map(cb => parseInt(cb.value));
+    }
+    
+    // Send media broadcast
+    async function sendMediaBroadcast() {
+      const mediaType = document.getElementById('mediaType').value;
+      const url = document.getElementById('mediaUrl').value;
+      const caption = document.getElementById('mediaCaption').value;
+      const filename = document.getElementById('mediaFilename').value;
+      const selectedGroups = getSelectedMediaGroups();
+      
+      if (!url) return alert('Please enter a media URL');
+      
+      const btn = event.target;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+      
+      try {
+        const payload = { url };
+        if (mediaType === 'document') {
+          payload.filename = filename || 'document';
+        } else {
+          payload.caption = caption;
+        }
+        if (selectedGroups) {
+          payload.groups = selectedGroups;
+        }
+        
+        const res = await fetch(API_BASE + '/api/send/' + mediaType, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        const targetText = selectedGroups ? `${selectedGroups.length} selected` : 'all';
+        alert(`✅ ${mediaType === 'image' ? '🖼️ Image' : mediaType === 'video' ? '🎬 Video' : '📄 Document'} sent to ${targetText} groups!`);
+        document.getElementById('mediaUrl').value = '';
+        document.getElementById('mediaCaption').value = '';
+        document.getElementById('mediaFilename').value = '';
+      } catch (e) {
+        alert('Failed to send media. Make sure the bot is running.');
+      }
+      
+      btn.textContent = '📸 Send Media';
+      btn.disabled = false;
+    }
+    
+    // Render media group checkboxes
+    function renderMediaGroupCheckboxes() {
+      const container = document.getElementById('mediaGroupCheckboxes');
+      if (!container) return;
+      
+      let html = `<label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <input type="checkbox" id="mediaSelectAll" onchange="toggleMediaGroups(this)"> 
+        <strong>Select All</strong>
+      </label>`;
+      
+      currentGroups.forEach((g, i) => {
+        html += `<label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <input type="checkbox" class="media-group-checkbox" value="${i + 1}"> 
+          ${i + 1}. ${g.name}
+        </label>`;
+      });
+      
+      container.innerHTML = html;
     }
     
     // Get selected group indices
