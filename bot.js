@@ -505,6 +505,73 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Session Export - Download session data for backup
+app.get('/api/session/export', (req, res) => {
+  try {
+    const sessionFiles = {};
+    const files = fs.readdirSync(SESSION_DIR);
+    
+    for (const file of files) {
+      const filePath = path.join(SESSION_DIR, file);
+      const stat = fs.statSync(filePath);
+      
+      if (stat.isFile()) {
+        const content = fs.readFileSync(filePath);
+        // Store as base64 to preserve binary data (creds.json may have special chars)
+        sessionFiles[file] = content.toString('base64');
+      }
+    }
+    
+    res.json({
+      success: true,
+      exportedAt: new Date().toISOString(),
+      files: sessionFiles,
+      fileCount: Object.keys(sessionFiles).length
+    });
+  } catch (error) {
+    console.error('Session export error:', error);
+    res.status(500).json({ error: 'Failed to export session: ' + error.message });
+  }
+});
+
+// Session Import - Restore session from backup
+app.post('/api/session/import', async (req, res) => {
+  try {
+    const { files } = req.body;
+    
+    if (!files || typeof files !== 'object') {
+      return res.status(400).json({ error: 'Invalid session data. Expected { files: { "filename": "base64..." } }' });
+    }
+    
+    // Write each file to sessions directory
+    for (const [filename, base64Content] of Object.entries(files)) {
+      const filePath = path.join(SESSION_DIR, filename);
+      const buffer = Buffer.from(base64Content, 'base64');
+      fs.writeFileSync(filePath, buffer);
+    }
+    
+    console.log('📥 Session imported successfully. Reconnecting...');
+    
+    // Reconnect to WhatsApp with new session
+    if (sock) {
+      sock.end(undefined);
+    }
+    
+    setTimeout(async () => {
+      await connectWA();
+    }, 1000);
+    
+    res.json({ 
+      success: true, 
+      message: 'Session imported. Bot is reconnecting...',
+      filesImported: Object.keys(files).length
+    });
+  } catch (error) {
+    console.error('Session import error:', error);
+    res.status(500).json({ error: 'Failed to import session: ' + error.message });
+  }
+});
+
 // Start
 const PORT = process.env.PORT || 3000;
 
@@ -515,6 +582,9 @@ async function start() {
   
   initSchedules();
   await connectWA();
+  
+  // Auto-save reminder on startup
+  console.log('💾 Tip: Download your session at /api/session/export and save it safely!');
 }
 
 start().catch(console.error);
