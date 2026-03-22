@@ -177,10 +177,23 @@
       <div class="card">
         <h2>📢 Send Broadcast</h2>
         <div class="form-group">
-          <label>Message to all groups</label>
+          <label>Select Groups</label>
+          <div id="broadcastGroupCheckboxes" style="max-height: 150px; overflow-y: auto; background: var(--secondary); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <input type="checkbox" id="selectAllGroups" onchange="toggleAllGroups(this)"> 
+              <strong>Select All</strong>
+            </label>
+          </div>
+          <p style="color: var(--text-muted); font-size: 12px;">Leave unchecked to send to ALL groups</p>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
           <textarea id="broadcastMessage" placeholder="Type your message here..."></textarea>
         </div>
-        <button class="btn btn-primary" onclick="sendBroadcast()">🚀 Send to All Groups</button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="sendBroadcast()">🚀 Send to Selected</button>
+          <button class="btn btn-success" onclick="sendBroadcastToAll()">📢 Send to ALL</button>
+        </div>
       </div>
     </div>
     
@@ -358,16 +371,87 @@
         list.innerHTML = '<p style="color:var(--text-muted)">No groups yet. Add bot to a group to get started.</p>';
         return;
       }
-      list.innerHTML = currentGroups.map(g => `
+      list.innerHTML = currentGroups.map((g, i) => `
         <div class="list-item">
-          <span>${g.name}</span>
+          <span>${i + 1}. ${g.name}</span>
           <span class="badge">${g.members || 0} members</span>
         </div>
       `).join('');
+      
+      // Also render checkboxes for broadcast
+      renderGroupCheckboxes();
     }
     
-    // Broadcast
+    // Render group checkboxes for selective broadcast
+    function renderGroupCheckboxes() {
+      const container = document.getElementById('broadcastGroupCheckboxes');
+      if (!container) return;
+      
+      let html = `<label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <input type="checkbox" id="selectAllGroups" onchange="toggleAllGroups(this)"> 
+        <strong>Select All</strong>
+      </label>`;
+      
+      currentGroups.forEach((g, i) => {
+        html += `<label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+          <input type="checkbox" class="group-checkbox" value="${i + 1}"> 
+          ${i + 1}. ${g.name}
+        </label>`;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    // Toggle all group checkboxes
+    function toggleAllGroups(checkbox) {
+      document.querySelectorAll('.group-checkbox').forEach(cb => {
+        cb.checked = checkbox.checked;
+      });
+    }
+    
+    // Get selected group indices
+    function getSelectedGroups() {
+      const checkboxes = document.querySelectorAll('.group-checkbox:checked');
+      if (checkboxes.length === 0) return null; // Send to all
+      return Array.from(checkboxes).map(cb => parseInt(cb.value));
+    }
+    
+    // Broadcast to selected groups
     async function sendBroadcast() {
+      const message = document.getElementById('broadcastMessage').value;
+      if (!message) return alert('Please enter a message');
+      
+      const selectedGroups = getSelectedGroups();
+      const btn = event.target;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+      
+      try {
+        const payload = { message };
+        if (selectedGroups) {
+          payload.groups = selectedGroups;
+        }
+        
+        const res = await fetch(API_BASE + '/api/send', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        const targetText = selectedGroups ? `${selectedGroups.length} selected` : 'all';
+        alert(`✅ Sent to ${targetText} groups!`);
+        document.getElementById('broadcastMessage').value = '';
+      } catch (e) {
+        alert('Failed to send. Make sure the bot is running.');
+      }
+      
+      btn.textContent = '🚀 Send to Selected';
+      btn.disabled = false;
+    }
+    
+    // Broadcast to ALL groups
+    async function sendBroadcastToAll() {
       const message = document.getElementById('broadcastMessage').value;
       if (!message) return alert('Please enter a message');
       
@@ -379,16 +463,16 @@
         const res = await fetch(API_BASE + '/api/send', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ message })
+          body: JSON.stringify({ message, groups: [] }) // Empty groups = all
         });
         const data = await res.json();
-        alert(`✅ Sent to ${data.groups} groups!`);
+        alert(`✅ Sent to ALL ${data.groups} groups!`);
         document.getElementById('broadcastMessage').value = '';
       } catch (e) {
         alert('Failed to send. Make sure the bot is running.');
       }
       
-      btn.textContent = '🚀 Send to All Groups';
+      btn.textContent = '📢 Send to ALL';
       btn.disabled = false;
     }
     

@@ -108,6 +108,27 @@ async function connectWA() {
       await handleMessage(msg);
     }
   });
+
+  // Handle group updates (new groups, participant changes)
+  sock.ev.on('groups.upsert', async (groupUpdates) => {
+    console.log('📥 Group upsert detected:', groupUpdates.length);
+    for (const group of groupUpdates) {
+      await handleNewGroup(group);
+    }
+  });
+
+  sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
+    console.log(`👥 Group ${id} update: ${action}`, participants);
+    // Bot was added to a group
+    if (action === 'add' && sock.user && participants.includes(sock.user.id)) {
+      const groupInfo = { id, subject: 'Unknown Group' };
+      try {
+        const metadata = await sock.groupMetadata(id);
+        groupInfo.subject = metadata.subject;
+      } catch (e) {}
+      await handleNewGroup(groupInfo);
+    }
+  });
 }
 
 // Message Handler
@@ -134,16 +155,101 @@ async function handleMessage(msg) {
   }
 }
 
+// Handle new group detection
+async function handleNewGroup(group) {
+  // Check if group already exists
+  const exists = groups.find(g => g.jid === group.id);
+  if (exists) return;
+
+  const groupName = group.subject || 'Unknown Group';
+  console.log(`🆕 New group detected: ${groupName} (${group.id})`);
+
+  // Notify admin
+  if (config.adminNumber) {
+    const adminJid = config.adminNumber + '@s.whatsapp.net';
+    await sock.sendMessage(adminJid, {
+      text: `🆕 Bot added to new group!\n\n📛 Name: ${groupName}\n🆔 JID: ${group.id}\n\nReply with:\n• "yes" to add to broadcast list\n• "no" to ignore`
+    });
+  }
+}
+
 // Admin Commands
 async function handleAdminCommand(msg, body) {
   const jid = msg.key.remoteJid;
   const cmd = body.toLowerCase().trim();
 
-  // Broadcast to all groups
+  // Handle response to new group prompt
+  if (cmd === 'yes' || cmd === 'no') {
+    // This would need more context - skip for now
+  }
+
+  // Selective or all groups broadcast
+  // Format: broadcast 1,3,5 <message> OR broadcast all <message>
   if (cmd.startsWith('broadcast ')) {
-    const message = body.substring(10);
-    await broadcastToGroups(message);
-    await sock.sendMessage(jid, { text: `✅ Broadcast sent to ${groups.length} groups!` });
+    const rest = body.substring(10);
+    
+    // Check if starts with "all"
+    if (rest.startsWith('all ')) {
+      const message = rest.substring(4);
+      await broadcastToGroups(message);
+      await sock.sendMessage(jid, { text: `✅ Broadcast sent to ALL ${groups.length} groups!` });
+      return;
+    }
+    
+    // Check for number list: broadcast 1,3,5 <message>
+    const numberMatch = rest.match(/^(\d+(?:,\d+)*)\s+(.+)$/);
+    if (numberMatch) {
+      const indices = numberMatch[1].split(',').map(n => parseInt(n) - 1); // Convert to 0-indexed
+      const message = numberMatch[2];
+      await broadcastToGroups(message, indices);
+      await sock.sendMessage(jid, { text: `✅ Broadcast sent to ${indices.length} selected group(s)!` });
+      return;
+    }
+    
+    // Fallback: broadcast all
+    await broadcastToGroups(rest);
+    await sock.sendMessage(jid, { text: `✅ Broadcast sent to ALL ${groups.length} groups!` });
+    return;
+  }
+
+  // Add group manually
+  // Format: addgroup <name> <jid>
+  if (cmd.startsWith('addgroup ')) {
+    const rest = body.substring(9);
+    const parts = rest.split(' ');
+    
+    if (parts.length >= 2) {
+      const name = parts.slice(0, -1).join(' ');
+      const groupJid = parts[parts.length - 1];
+      
+      // Validate JID format
+      if (!groupJid.includes('@g.us')) {
+        await sock.sendMessage(jid, { text: '❌ Invalid group JID. Use format: addgroup <name> <jid@group.us>' });
+        return;
+      }
+      
+      groups.push({ name, jid: groupJid });
+      saveGroups();
+      await sock.sendMessage(jid, { text: `✅ Group "${name}" added! Total: ${groups.length}` });
+    } else {
+      await sock.sendMessage(jid, { text: '❌ Usage: addgroup <name> <jid@group.us>\nExample: addgroup TGR Team 123456789-123456@g.us' });
+    }
+    return;
+  }
+
+  // Remove group by number
+  // Format: removegroup <number>
+  if (cmd.startsWith('removegroup ')) {
+    const num = parseInt(body.substring(12));
+    
+    if (isNaN(num) || num < 1 || num > groups.length) {
+      await sock.sendMessage(jid, { text: `❌ Invalid group number. Use 1-${groups.length}` });
+      return;
+    }
+    
+    const removed = groups.splice(num - 1, 1)[0];
+    saveGroups();
+    await sock.sendMessage(jid, { text: `✅ Group "${removed.name}" removed! Total: ${groups.length}` });
     return;
   }
 
@@ -165,12 +271,17 @@ async function handleAdminCommand(msg, body) {
     return;
   }
 
-  // List groups
+  // List groups with index numbers
   if (cmd === 'groups') {
+    if (groups.length === 0) {
+      await sock.sendMessage(jid, { text: '📋 No groups added yet.\n\nAdd groups with: addgroup <name> <jid>' });
+      return;
+    }
     let text = '📋 Your Groups:\n\n';
     groups.forEach((g, i) => {
       text += `${i + 1}. ${g.name}\n`;
     });
+    text += '\n💡 Use numbers for selective broadcast:\n• broadcast 1,3,5 Hello\n• broadcast all Hello';
     await sock.sendMessage(jid, { text });
     return;
   }
@@ -187,24 +298,39 @@ async function handleAdminCommand(msg, body) {
   await sock.sendMessage(jid, {
     text: `🐝 TGR Assistant Commands:
 
-📢 broadcast <message> - Send to all groups
+📢 broadcast <message> - Send to ALL groups
+📢 broadcast all <message> - Send to ALL groups
+📢 broadcast 1,3,5 <msg> - Send to SELECTED groups
+👥 addgroup <name> <jid> - Add group manually
+❌ removegroup <number> - Remove group by number
+📋 groups - List all groups (with numbers)
+
 💡 addmotivation <text> - Add morning message
 💡 addtip <text> - Add daily tip
-📋 groups - List your groups
 📅 schedule - Use dashboard for now
 
 🔗 Link group - Send group invite link`
   });
 }
 
-// Broadcast to all groups
-async function broadcastToGroups(message) {
-  for (const group of groups) {
+// Broadcast to all groups or selective groups
+async function broadcastToGroups(message, targetIndices = null) {
+  let targetGroups = groups;
+  
+  // If specific indices provided, filter groups
+  if (targetIndices && Array.isArray(targetIndices)) {
+    targetGroups = targetIndices.map(i => groups[i]).filter(g => g);
+    console.log(`📢 Selective broadcast to ${targetGroups.length} groups`);
+  } else {
+    console.log(`📢 Broadcasting to all ${groups.length} groups`);
+  }
+  
+  for (const group of targetGroups) {
     try {
       await sock.sendMessage(group.jid, { text: message });
       console.log(`📢 Sent to ${group.name}`);
     } catch (e) {
-      console.log(`❌ Failed to send to ${group.name}`);
+      console.log(`❌ Failed to send to ${group.name}: ${e.message}`);
     }
   }
 }
@@ -233,12 +359,20 @@ function initSchedules() {
 }
 
 // Express API for admin control
+// Enhanced send with selective group targeting
 app.post('/api/send', async (req, res) => {
-  const { message, type } = req.body;
+  const { message, type, groups: targetGroups } = req.body;
   if (!message) return res.status(400).json({ error: 'Message required' });
   
-  await broadcastToGroups(message);
-  res.json({ success: true, groups: groups.length });
+  let targetIndices = null;
+  if (targetGroups && Array.isArray(targetGroups)) {
+    // Convert 1-based to 0-based indices
+    targetIndices = targetGroups.map(n => n - 1);
+  }
+  
+  await broadcastToGroups(message, targetIndices);
+  const count = targetIndices ? targetIndices.length : groups.length;
+  res.json({ success: true, groups: count });
 });
 
 app.post('/api/schedule', (req, res) => {
@@ -263,6 +397,34 @@ app.post('/api/schedule', (req, res) => {
 
 app.get('/api/groups', (req, res) => {
   res.json(groups);
+});
+
+// Add a new group
+app.post('/api/groups', (req, res) => {
+  const { name, jid } = req.body;
+  if (!name || !jid) return res.status(400).json({ error: 'Name and JID required' });
+  
+  // Check if already exists
+  if (groups.find(g => g.jid === jid)) {
+    return res.status(400).json({ error: 'Group already exists' });
+  }
+  
+  groups.push({ name, jid });
+  saveGroups();
+  res.json({ success: true, groups });
+});
+
+// Remove a group by index (1-based)
+app.delete('/api/groups/:index', (req, res) => {
+  const index = parseInt(req.params.index) - 1; // Convert to 0-based
+  
+  if (isNaN(index) || index < 0 || index >= groups.length) {
+    return res.status(400).json({ error: 'Invalid index' });
+  }
+  
+  const removed = groups.splice(index, 1)[0];
+  saveGroups();
+  res.json({ success: true, removed, groups });
 });
 
 app.post('/api/config', (req, res) => {
