@@ -57,6 +57,7 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Session Backup** | ✅ Done | Export/import session via API - no more QR rescans |
 | **Rich Media** | ✅ Done | Image, video, and document broadcasting via URL |
 | **Dashboard Auth** | ✅ Done | Password protection for dashboard |
+| **SQLite Database** | ✅ Done | Replaced JSON files with SQLite for scalability |
 | **Proper Logging** | ❌ Not Done | Only console.log - no structured logging |
 
 ### 📅 Scheduled Broadcasts (WAT - West Africa Time)
