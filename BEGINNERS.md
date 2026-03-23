@@ -191,6 +191,26 @@ Or use the bot via WhatsApp - there's a settings option in the dashboard.
 
 ---
 
+## ⚡ Can I Use It Without Fly.io?
+
+**Yes! Totally optional.**
+
+| How You Run It | What Happens |
+|----------------|--------------|
+| **On your PC** | Works perfectly! Just run `npm start` |
+| **On Fly.io** | 24/7 (runs on their servers, no PC needed) |
+
+**On your PC (FREE):**
+- Run `npm start` → bot goes online
+- Use WhatsApp commands → works great
+- Close terminal → bot stops
+
+**On Fly.io (24/7 FREE):**
+- Deploy once → bot runs forever
+- Access from anywhere
+
+---
+
 ## 🚀 Want to Run 24/7?
 
 The above runs on your computer. To run **24/7** (even when your computer is off), deploy to **Fly.io**:
