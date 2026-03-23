@@ -2,6 +2,12 @@
 
 A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team groups. Built with Baileys, Express, Node.js, and SQLite.
 
+---
+
+**🎉 New to Tech? Start Here!** → [Complete Beginner's Guide](#-complete-beginners-guide)
+
+---
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
