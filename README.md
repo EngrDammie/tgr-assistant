@@ -4,7 +4,7 @@ A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team 
 
 ---
 
-**🎉 New to Tech? Start Here!** → [Complete Beginner's Guide](#-complete-beginners-guide)
+**🎉 New to Tech? Start Here!** → [Beginner's Guide](https://github.com/EngrDammie/tgr-assistant/blob/master/BEGINNERS.md)
 
 ---
 
@@ -21,6 +21,7 @@ A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team 
 - [Configuration](#configuration)
 - [Data Storage](#data-storage)
 - [Project Structure](#project-structure)
+- [📚 Beginner's Guide](https://github.com/EngrDammie/tgr-assistant/blob/master/BEGINNERS.md)
 
 ---
 
