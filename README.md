@@ -174,8 +174,8 @@ Send these to the bot from your registered admin number:
 
 | Command | Status | Description |
 |---------|--------|-------------|
-| `schedule <time> <msg>` | ❌ Not Done | Schedule a message |
-| `status` | ❌ Not Done | Show bot status |
+| `schedule <time> <msg>` | ✅ Done | Schedule a message (cron or simple like 9am) |
+| `status` | ✅ Done | Show bot status |
 
 ### ✅ Auto Group Detection
 
@@ -219,8 +219,8 @@ Bot automatically detects when added to a new group and notifies admin.
 | Method | Endpoint | Status | Description |
 |--------|----------|--------|-------------|
 | GET | `/api/groups` | ✅ Works | List all tracked groups |
-| POST | `/api/groups` | ❌ Not Done | Add new group |
-| DELETE | `/api/groups/:id` | ❌ Not Done | Remove group |
+| POST | `/api/groups` | ✅ Done | Add new group |
+| DELETE | `/api/groups/:id` | ✅ Done | Remove group |
 
 ### Content Management
 
@@ -241,7 +241,7 @@ Bot automatically detects when added to a new group and notifies admin.
 | Method | Endpoint | Status | Description |
 |--------|----------|--------|-------------|
 | GET | `/api/status` | ✅ Works | Bot connection status |
-| GET | `/api/health` | ❌ Not Done | Health check for monitoring |
+| GET | `/api/health` | ✅ Done | Health check for monitoring |
 
 ---
 

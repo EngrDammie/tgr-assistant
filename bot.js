@@ -410,11 +410,81 @@ async function handleAdminCommand(msg, body) {
     return;
   }
 
-  // Schedule message
+  // Schedule message via WhatsApp command
+  // Format: schedule <time> <message> OR schedule <cron expression> <message>
+  // Example: schedule 9am Good morning! OR schedule 0 7 * * * Morning message
   if (cmd.startsWith('schedule ')) {
-    // Format: schedule <time> <message>
-    // Example: schedule 7am Good morning!
-    await sock.sendMessage(jid, { text: '📅 Schedule feature coming soon! Use the web dashboard for now.' });
+    const rest = body.substring(9).trim();
+    
+    // Parse: could be "9am message" or "0 7 * * * message"
+    const parts = rest.split(' ');
+    
+    // Check if it's a cron expression (5+ parts)
+    if (parts.length >= 5) {
+      // It's a cron expression: schedule 0 7 * * * Morning
+      const cronExpr = parts.slice(0, 5).join(' ');
+      const message = parts.slice(5).join(' ');
+      
+      // Validate cron expression
+      if (!cron.validate(cronExpr)) {
+        await sock.sendMessage(jid, { text: '❌ Invalid cron expression.\nExample: schedule 0 7 * * * Morning message' });
+        return;
+      }
+      
+      const scheduleId = uuidv4();
+      db.addSchedule(scheduleId, message, cronExpr, 'recurring');
+      refreshData();
+      
+      await sock.sendMessage(jid, { text: `✅ Recurring schedule created!\n⏰ Time: ${cronExpr}\n📝 Message: ${message}\n🆔 ID: ${scheduleId}` });
+      return;
+    }
+    
+    // Simple time format: schedule 9am Good morning!
+    // Parse time like "9am", "12pm", "7am", etc.
+    const timeMatch = rest.match(/^(\d{1,2})(am|pm)\s+(.+)$/i);
+    
+    if (timeMatch) {
+      let hour = parseInt(timeMatch[1]);
+      const period = timeMatch[2].toLowerCase();
+      const message = timeMatch[3];
+      
+      // Convert to 24-hour format
+      if (period === 'am') {
+        if (hour === 12) hour = 0; // 12am = 0
+      } else {
+        if (hour !== 12) hour += 12; // 1pm = 13
+      }
+      
+      const cronExpr = `0 ${hour} * * *`; // Daily at specified hour
+      
+      const scheduleId = uuidv4();
+      db.addSchedule(scheduleId, message, cronExpr, 'daily');
+      refreshData();
+      
+      await sock.sendMessage(jid, { text: `✅ Daily schedule created!\n⏰ Time: ${hour}:00 daily\n📝 Message: ${message}\n🆔 ID: ${scheduleId}` });
+      return;
+    }
+    
+    await sock.sendMessage(jid, { text: '❌ Invalid format.\n\nUse:\n• schedule 9am <message> - Daily at 9am\n• schedule 0 7 * * * <message> - Cron format\n\nExamples:\n• schedule 7am Good morning everyone!\n• schedule 0 14 * * * Daily tip' });
+    return;
+  }
+  
+  // Show bot status
+  if (cmd === 'status') {
+    const statusText = `📊 TGR Assistant Status:
+
+🔗 Connection: ${isConnected ? '✅ Connected' : '❌ Disconnected'}
+👥 Groups: ${groups.length}
+📅 Active Schedules: ${schedules.length}
+💾 Database: ✅ SQLite
+⏱️ Uptime: ${Math.floor(process.uptime() / 60)} minutes
+
+📝 Quick Stats:
+• Morning motivations: ${content.morningMotivation?.length || 0}
+• Tips: ${content.tips?.length || 0}
+• FAQs: ${Object.keys(content.faqs || {}).length}`;
+    
+    await sock.sendMessage(jid, { text: statusText });
     return;
   }
 
@@ -436,7 +506,10 @@ async function handleAdminCommand(msg, body) {
 
 💡 addmotivation <text> - Add morning message
 💡 addtip <text> - Add daily tip
-📅 schedule - Use dashboard for now
+📅 schedule 9am <msg> - Schedule daily message
+📅 schedule 0 7 * * * <msg> - Cron schedule
+
+🔍 status - Show bot status
 
 🔗 Link group - Send group invite link`
   });
@@ -804,6 +877,23 @@ app.get('/health', (req, res) => {
     connected: isConnected,
     uptime: process.uptime(),
     groups: groups.length
+  });
+});
+
+// Health check endpoint (API version)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    connected: isConnected,
+    uptime: process.uptime(),
+    groups: groups.length,
+    schedules: schedules.length,
+    content: {
+      motivations: content.morningMotivation?.length || 0,
+      tips: content.tips?.length || 0,
+      faqs: Object.keys(content.faqs || {}).length
+    },
+    timestamp: new Date().toISOString()
   });
 });
 
