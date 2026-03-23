@@ -1,6 +1,6 @@
 # TGR WhatsApp Assistant Bot
 
-A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team groups. Built with Baileys, Express, and Node.js.
+A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team groups. Built with Baileys, Express, Node.js, and SQLite.
 
 ## 📋 Table of Contents
 
@@ -9,12 +9,12 @@ A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team 
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
 - [Deployment](#deployment)
-- [Usage](#usage)
+- [WhatsApp Commands](#whatsapp-commands)
 - [API Endpoints](#api-endpoints)
+- [Dashboard](#dashboard)
 - [Configuration](#configuration)
 - [Data Storage](#data-storage)
 - [Project Structure](#project-structure)
-- [Known Issues \& Improvements](#known-issues--improvements)
 
 ---
 
@@ -22,51 +22,83 @@ A full-featured WhatsApp bot for managing your TGR (Top Up and Get Reward) team 
 
 This bot connects to WhatsApp using the Baileys library and provides:
 
-- Broadcast messages to all managed groups
-- Scheduled daily messages (motivation, tips)
-- FAQ auto-reply for common questions
-- Admin dashboard for managing content
-- REST API for programmatic control
+- 📢 Broadcast messages to all or selected groups
+- 📅 Scheduled daily messages (motivation, tips)
+- ❓ FAQ auto-reply for common TGR questions
+- 🎨 Rich media broadcasting (images, videos, documents)
+- 🔄 Session backup/restore (no QR rescan needed)
+- 📊 Admin dashboard with metrics
+- 🔐 Password-protected dashboard
+- 💾 SQLite database for scalability
 
 ---
 
 ## Features
 
-### ✅ IMPLEMENTED (Currently Working)
+### Core Broadcasting
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Multi-Device Connection** | ✅ Done | WhatsApp session persistence using multi-file auth state |
-| **Broadcast to ALL Groups** | ✅ Done | Send messages to all connected WhatsApp groups at once |
-| **Scheduled Messages** | ✅ Done | Auto-send motivation (7am) and tips (12pm, 6pm) WAT |
-| **FAQ Auto-Reply** | ✅ Done | Keyword matching for common TGR questions |
-| **Group Storage** | ✅ Done | Stores group JIDs in JSON file |
-| **Web Dashboard** | ✅ Done | Admin UI served by Express |
-| **REST API** | ✅ Done | Endpoints for send, config, content, groups, schedules |
+| Feature | Description |
+|---------|-------------|
+| **Broadcast All** | Send message to all tracked groups |
+| **Selective Broadcast** | Send to specific groups: `broadcast 1,3,5 Hello` |
+| **Rich Media** | Send images, videos, documents via URL |
+| **Retry Logic** | 3 retries with exponential backoff on failure |
+| **Rate Limiting** | Configurable delay between messages |
 
-### ❌ NOT IMPLEMENTED (Planned)
+### Group Management
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Selective Broadcasting** | ✅ Done | `broadcast 1,3,5 Hello` - send to specific groups |
-| **Add/Remove Groups** | ✅ Done | `addgroup`, `removegroup` commands |
-| **Auto-detect New Groups** | ✅ Done | Notifies admin when bot added to new group |
-| **Error Handling** | ✅ Done | 3 retries with backoff, admin alerts on failure |
-| **Rate Limiting** | ✅ Done | 2-second delay between messages (configurable) |
-| **Health Check Endpoint** | ✅ Done | `/health` returns status, uptime, connection info |
-| **Session Backup** | ✅ Done | Export/import session via API - no more QR rescans |
-| **Rich Media** | ✅ Done | Image, video, and document broadcasting via URL |
-| **Dashboard Auth** | ✅ Done | Password protection for dashboard |
-| **SQLite Database** | ✅ Done | Replaced JSON files with SQLite for scalability |
-| **Proper Logging** | ✅ Done | Structured logging with Pino |
+| Feature | Description |
+|---------|-------------|
+| **Add Group** | `addgroup <name> <jid>` - Manually add a group |
+| **Remove Group** | `removegroup <number>` - Remove by index |
+| **List Groups** | `groups` - Show all groups with numbers |
+| **Auto-Detect** | Notifies admin when bot is added to new group |
 
-### 📅 Scheduled Broadcasts (WAT - West Africa Time)
+### Scheduling
 
-| Time | Content |
-|------|---------|
-| 7:00 AM | Morning motivation |
-| 12:00 PM | Daily tip |
-| 6:00 PM | Evening tip |
+| Feature | Description |
+|---------|-------------|
+| **Built-in Schedules** | Auto-sends motivation at 7am, tips at 12pm & 6pm (WAT) |
+| **Custom Schedule** | `schedule 9am <message>` - Daily at specific time |
+| **Cron Schedule** | `schedule 0 7 * * * <message>` - Full cron syntax |
+| **API Schedules** | Create/edit schedules via REST API |
+
+### Bot Commands
+
+| Command | Description |
+|---------|-------------|
+| `broadcast <msg>` | Send to ALL groups |
+| `broadcast all <msg>` | Explicitly send to all groups |
+| `broadcast 1,3,5 <msg>` | Send to specific groups by index |
+| `image <url> <caption>` | Send image to groups |
+| `video <url> <caption>` | Send video to groups |
+| `document <url> <file>` | Send document to groups |
+| `addgroup <name> <jid>` | Add group manually |
+| `removegroup <number>` | Remove group by number |
+| `groups` | List all groups with index numbers |
+| `addmotivation <text>` | Add morning motivation |
+| `addtip <text>` | Add daily tip |
+| `schedule 9am <msg>` | Schedule daily message |
+| `schedule 0 7 * * * <msg>` | Schedule with cron |
+| `status` | Show bot status and stats |
+| `help` | Show all available commands |
+
+### Database & Storage
+
+| Feature | Description |
+|---------|-------------|
+| **SQLite** | Persistent data storage |
+| **Session Backup** | Export/import WhatsApp session via API |
+| **Config Storage** | Bot settings persisted in SQLite |
+
+### Dashboard & API
+
+| Feature | Description |
+|---------|-------------|
+| **Web Dashboard** | Admin UI served at root URL |
+| **Dashboard Auth** | Password-protected access |
+| **REST API** | Full API for programmatic control |
+| **Health Check** | `/api/health` for monitoring |
 
 ---
 
@@ -77,9 +109,10 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Baileys** | ^6.10.4 | WhatsApp Web JS library |
 | **Express** | ^4.18.2 | Web server & API |
 | **node-cron** | ^3.0.3 | Scheduled tasks |
+| **better-sqlite3** | ^9.0.0 | SQLite database |
 | **qrcode** | ^1.5.3 | QR code generation |
 | **uuid** | ^9.0.1 | Unique IDs for schedules |
-| **dotenv** | ^16.3.1 | Environment variables |
+| **Pino** | ^7.0.0 | Structured logging |
 
 ---
 
@@ -103,7 +136,7 @@ npm start
 
 1. Run `npm start`
 2. Scan the QR code with your WhatsApp
-3. The session will be saved in `/sessions` folder
+3. Session is saved in `/sessions` folder automatically
 
 ---
 
@@ -111,32 +144,26 @@ npm start
 
 ### Fly.io (Recommended)
 
-1. Install Fly CLI and authenticate:
-   ```bash
-   brew install flyctl/flyctl/flyctl
-   fly auth login
-   ```
+```bash
+# Install Fly CLI
+brew install flyctl/flyctl/flyctl
 
-2. Launch the app:
-   ```bash
-   cd tgr-assistant
-   fly launch
-   ```
+# Authenticate
+fly auth login
 
-3. Set environment variables:
-   ```bash
-   fly secrets set PORT=3000
-   ```
+# Launch
+cd tgr-assistant
+fly launch
 
-4. Deploy:
-   ```bash
-   fly deploy
-   ```
+# Set port
+fly secrets set PORT=3000
 
-5. Open the app:
-   ```bash
-   fly open
-   ```
+# Deploy
+fly deploy
+
+# Open
+fly open
+```
 
 ### Docker
 
@@ -152,34 +179,50 @@ CMD ["npm", "start"]
 
 ---
 
-## Usage
+## WhatsApp Commands
 
-### ✅ CURRENT WhatsApp Commands (Working)
+All commands sent from your registered admin number:
 
-Send these to the bot from your registered admin number:
+### Broadcasting
 
-| Command | Status | Description |
-|---------|--------|-------------|
-| `broadcast <message>` | ✅ Works | Send message to **ALL** groups |
-| `broadcast 1,3,5 <msg>` | ✅ Works | Send to SPECIFIC groups by index |
-| `broadcast all <message>` | ✅ Works | Explicitly send to all groups |
-| `addgroup <name> <jid>` | ✅ Works | Add a group to the list |
-| `removegroup <number>` | ✅ Works | Remove a group by index |
-| `addmotivation <text>` | ✅ Works | Add new morning motivation |
-| `addtip <text>` | ✅ Works | Add new daily tip |
-| `groups` | ✅ Works | List all tracked groups with index |
-| `help` | ✅ Works | Show available commands |
+```
+broadcast Hello Team!           → Send to ALL groups
+broadcast all Hello!            → Explicitly ALL groups
+broadcast 1,3,5 Hello           → Send to groups 1, 3, and 5
+image https://example.com/img.jpg Check this out!
+video https://example.com/video.mp4
+document https://example.com/file.pdf Report.pdf
+```
 
-### ❌ MISSING Commands (Need to Build)
+### Group Management
 
-| Command | Status | Description |
-|---------|--------|-------------|
-| `schedule <time> <msg>` | ✅ Done | Schedule a message (cron or simple like 9am) |
-| `status` | ✅ Done | Show bot status |
+```
+addgroup My Team 123456789-123456@g.us
+removegroup 2
+groups
+```
 
-### ✅ Auto Group Detection
+### Content
 
-Bot automatically detects when added to a new group and notifies admin.
+```
+addmotivation Today is a great day to succeed!
+addtip Remember to follow up with your team members!
+```
+
+### Scheduling
+
+```
+schedule 9am Good morning everyone!     → Daily at 9am
+schedule 2pm Team update                → Daily at 2pm
+schedule 0 7 * * * Morning message      → Cron format
+```
+
+### Info
+
+```
+status          → Show bot connection & stats
+help            → Show all commands
+```
 
 ---
 
@@ -189,59 +232,89 @@ Bot automatically detects when added to a new group and notifies admin.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/send` | Broadcast message to all groups |
+| POST | `/api/send` | Broadcast to all groups |
+| POST | `/api/send/image` | Send image |
+| POST | `/api/send/video` | Send video |
+| POST | `/api/send/document` | Send document |
 
-**Request:**
+**Request (send):**
 ```json
 {
   "message": "Hello TGR Family!",
-  "type": "motivation" // optional
+  "groups": [1, 3, 5]  // optional, sends to all if omitted
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "groups": 5
-}
-```
+### Groups
 
-### Schedule
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/groups` | List all groups |
+| POST | `/api/groups` | Add new group |
+| DELETE | `/api/groups/:index` | Remove group |
+
+### Schedules
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/schedule` | List all schedules |
-| POST | `/api/schedule` | Create new schedule |
+| POST | `/api/schedule` | Create schedule |
 
-### Groups
-
-| Method | Endpoint | Status | Description |
-|--------|----------|--------|-------------|
-| GET | `/api/groups` | ✅ Works | List all tracked groups |
-| POST | `/api/groups` | ✅ Done | Add new group |
-| DELETE | `/api/groups/:id` | ✅ Done | Remove group |
-
-### Content Management
+### Content
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/content` | Get all content (motivation, tips, FAQs) |
+| GET | `/api/content` | Get motivations, tips, FAQs |
 | POST | `/api/content` | Update content |
 
 ### Configuration
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/config` | Get bot config |
-| POST | `/api/config` | Update bot config |
+| GET | `/api/config` | Get config |
+| POST | `/api/config` | Update config |
 
-### Status
+### Status & Health
 
-| Method | Endpoint | Status | Description |
-|--------|----------|--------|-------------|
-| GET | `/api/status` | ✅ Works | Bot connection status |
-| GET | `/api/health` | ✅ Done | Health check for monitoring |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/status` | Bot connection status |
+| GET | `/api/health` | Health check for monitoring |
+
+### Session Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/session/export` | Export session backup |
+| POST | `/api/session/import` | Restore session |
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/login` | Dashboard login |
+
+---
+
+## Dashboard
+
+Access at `http://localhost:3000` (or your deployed URL).
+
+### Features
+- View connected groups
+- Send broadcasts
+- Manage content (motivations, tips, FAQs)
+- View bot status
+- Configure settings
+
+### Authentication
+1. Set dashboard password via API:
+```bash
+curl -X POST https://your-bot-url/api/config \
+  -H "Content-Type: application/json" \
+  -d '{"dashboardPassword": "your_secure_password"}'
+```
+2. Login at the dashboard URL
 
 ---
 
@@ -249,41 +322,54 @@ Bot automatically detects when added to a new group and notifies admin.
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PORT` | No | Server port (default: 3000) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | 3000 | Server port |
 
-### Admin Setup
-
-1. Start the bot
-2. Send a message from your WhatsApp number
-3. The bot will recognize your number
-4. Use `/api/config` to set your number as admin:
+### Config Options (via API)
 
 ```bash
-curl -X POST https://your-bot-url/api/config \
+# Set admin number
+curl -X POST /api/config \
   -H "Content-Type: application/json" \
   -d '{"adminNumber": "2348012345678"}'
+
+# Set bot name
+curl -X POST /api/config \
+  -H "Content-Type: application/json" \
+  -d '{"botName": "TGR Assistant"}'
+
+# Set message delay (ms)
+curl -X POST /api/config \
+  -H "Content-Type: application/json" \
+  -d '{"messageDelayMs": 2000}'
+
+# Set dashboard password
+curl -X POST /api/config \
+  -H "Content-Type: application/json" \
+  -d '{"dashboardPassword": "secret123"}'
 ```
 
 ---
 
 ## Data Storage
 
-Data is stored in JSON files in the `/data` folder:
+### SQLite Database
 
-| File | Contents |
-|------|----------|
-| `config.json` | Owner number, bot name, admin number |
-| `schedules.json` | Scheduled messages |
-| `groups.json` | Tracked WhatsApp groups |
-| `content.json` | Motivations, tips, FAQs |
+The bot uses SQLite (`tgr.db`) for persistent storage:
+
+| Table | Contents |
+|-------|----------|
+| `config` | Bot configuration |
+| `groups` | Tracked WhatsApp groups |
+| `schedules` | Custom schedules |
+| `content` | Motivations, tips, FAQs |
 
 ### Session Storage
 
-WhatsApp authentication is persisted in `/sessions` folder.
+WhatsApp authentication is in `/sessions` folder (auto-created).
 
-⚠️ **Important:** Add `/sessions` to `.gitignore` if you plan to commit!
+⚠️ **Important:** The `/sessions` folder is gitignored to protect your WhatsApp session.
 
 ---
 
@@ -291,156 +377,19 @@ WhatsApp authentication is persisted in `/sessions` folder.
 
 ```
 tgr-assistant/
-├── bot.js              # Main application (Baileys + Express)
+├── bot.js              # Main application
+├── database.js         # SQLite database module
+├── logger.js           # Pino logging
 ├── index.html          # Admin dashboard
+├── login.html          # Dashboard login
 ├── package.json        # Dependencies
-├── .gitignore          # Ignore sessions/node_modules
-├── data/               # JSON data storage (created on first run)
-│   ├── config.json
-│   ├── schedules.json
-│   ├── groups.json
-│   └── content.json
-└── sessions/           # WhatsApp auth state (created on first run)
-```
-
----
-
-## Known Issues & Improvements
-
-### Priority 1 - Critical
-
-| # | Issue | Status |
-|---|-------|--------|
-| 1 | **Error Handling** | ✅ Done |
-| 2 | **Rate Limiting** | ✅ Done |
-| 3 | **Health Check Endpoint** | ✅ Done |
-| 4 | **Session Backup** | ✅ Done |
-| 5 | **Migrate to Fly.io** | ✅ Done |
-
-### Priority 2 - Important
-
-| # | Issue | Description |
-|---|-------|-------------|
-| 7 | **Text-Only Messages** | Currently supports text only; should add image/video/document broadcasting |
-| 8 | **Plain JSON Storage** | Using JSON files limits scalability; should migrate to SQLite or PostgreSQL |
-| 9 | **No Proper Logging** | Only console.log; should add structured logging (winston/pino) |
-| 10 | **Dashboard Has No Auth** | The web dashboard (`index.html`) is publicly accessible; needs login protection |
-
-### Priority 3 - Nice to Have
-
-| # | Feature | Description |
-|---|---------|-------------|
-| 11 | **Interactive Messages** | Use Baileys buttons/lists for better user experience |
-| 12 | **Message Templates** | Pre-built rich messages for common broadcasts |
-| 13 | **Analytics Dashboard** | Track message delivery, group engagement |
-| 14 | **Multi-Admin Support** | Allow multiple admin numbers |
-| 15 | **Telegram Integration** | Bridge WhatsApp groups to Telegram |
-| 16 | **Voice Notes** | Support audio broadcasting |
-
----
-
-## 📍 Detailed Roadmap
-
-### Phase 1: Foundation (Critical)
-*Make the bot reliable and usable*
-
-1. **Group Management** 
-   - Add commands to add/remove groups
-   - Auto-detect when bot is added to new group
-   - **SELECT GROUPS** for each broadcast (not just all)
-   - API: `POST/DELETE /api/groups`
-
-2. **Error Handling**
-   - Retry failed messages (3 attempts)
-   - Alert admin when broadcast fails
-   - Log all failures to file
-
-3. **Rate Limiting**
-   - Add 2-3 second delay between messages
-   - Queue system for broadcasts
-
-4. **Health Check**
-   - Add `/health` endpoint
-   - Return connection status, group count
-
-5. **Migrate to Fly.io**
-   - Deploy on Fly.io for persistent hosting
-   - ✅ DONE
-
-### Phase 2: Features (Important)
-*Add rich functionality*
-
-6. **Rich Media Support**
-   - Image broadcasting
-   - Video broadcasting
-   - Document sharing
-
-7. **Dashboard Auth**
-   - Basic password protection
-   - Login page
-
-8. **Database Migration**
-   - Move from JSON files to SQLite/PostgreSQL
-   - Better data integrity
-
-9. **Structured Logging**
-   - Use Winston or Pino
-   - Log rotation
-
-### Phase 3: Polish (Nice to Have)
-*Make it premium*
-
-10. **Interactive Messages**
-    - Use WhatsApp buttons
-    - Use WhatsApp lists
-
-11. **Message Templates**
-    - Save reusable messages
-    - Quick-send buttons
-
-12. **Analytics**
-    - Track delivery rates
-    - Group engagement metrics
-
-13. **Multi-Admin**
-    - Multiple admin numbers
-    - Role-based access
-
-14. **Telegram Bridge**
-    - Forward WhatsApp to Telegram
-    - Control bot from Telegram
-
-15. **Voice Notes**
-    - Audio broadcasting
-
----
-
-## 📊 Current Architecture
-
-```
-                    ┌─────────────────┐
-                    │   WhatsApp      │
-                    │   (Baileys)     │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   bot.js        │
-                    │   (Node.js)     │
-                    └────────┬────────┘
-                             │
-         ┌───────────────────┼───────────────────┐
-         │                   │                   │
-┌────────▼────────┐  ┌──────▼──────┐  ┌────────▼────────┐
-│  Scheduled Jobs │  │  REST API   │  │  Web Dashboard │
-│  (node-cron)    │  │  (Express)  │  │  (index.html)  │
-└────────┬────────┘  └──────┬──────┘  └────────┬────────┘
-         │                   │                   │
-         └───────────────────┼───────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   JSON Files   │
-                    │   /data/       │
-                    └─────────────────┘
+├── Dockerfile          # Docker config
+├── fly.toml            # Fly.io config
+├── .gitignore          # Ignores sessions/node_modules
+├── sessions/           # WhatsApp auth (gitignored)
+│   └── *.json
+└── data/               # SQLite database (gitignored)
+    └── tgr.db
 ```
 
 ---
@@ -453,7 +402,6 @@ ISC - Engr. Dammie Optimus
 
 ## Support
 
-For issues or questions about TGR:
 - 📧 Email: dammieoptimus@gmail.com
 - 🌐 Website: https://www.topupandgetreward.com
 - 🆔 Referral ID: DammieOptimus2
