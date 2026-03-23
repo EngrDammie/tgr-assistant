@@ -45,6 +45,19 @@ This bot connects to WhatsApp using the Baileys library and provides:
 | **Retry Logic** | 3 retries with exponential backoff on failure |
 | **Rate Limiting** | Configurable delay between messages |
 
+### Beautiful Dashboard
+
+| Feature | Description |
+|---------|-------------|
+| **Stunning UI** | Modern dark theme with orange glow effects |
+| **Responsive Design** | Works perfectly on desktop & mobile |
+| **Real-time Status** | Live connection, groups, schedules, messages |
+| **One-click Broadcast** | Send to all or selected groups |
+| **Media Broadcasting** | Send images, videos, documents from dashboard |
+| **Content Management** | Edit motivations, tips, FAQs |
+| **Settings Panel** | Configure bot, admin, passwords |
+| **Toast Notifications** | Beautiful success/error feedback |
+
 ### Group Management
 
 | Feature | Description |
@@ -380,8 +393,8 @@ tgr-assistant/
 ├── bot.js              # Main application
 ├── database.js         # SQLite database module
 ├── logger.js           # Pino logging
-├── index.html          # Admin dashboard
-├── login.html          # Dashboard login
+├── index.html          # Admin dashboard (beautifully designed)
+├── login.html          # Dashboard login (beautifully designed)
 ├── package.json        # Dependencies
 ├── Dockerfile          # Docker config
 ├── fly.toml            # Fly.io config
