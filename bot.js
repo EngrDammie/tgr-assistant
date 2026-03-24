@@ -4,7 +4,7 @@
  * Now using SQLite for data storage
  */
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
