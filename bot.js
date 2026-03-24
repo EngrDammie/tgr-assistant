@@ -876,8 +876,9 @@ app.get('/api/status', (req, res) => {
 // Login endpoint
 app.post('/api/login', (req, res) => {
   const { password } = req.body;
+  // If no password set, allow access (first-time setup mode)
   if (!config.dashboardPassword) {
-    return res.status(400).json({ error: 'No password set. Configure dashboardPassword in config.' });
+    return res.json({ success: true, token: null, message: 'No password configured - access granted' });
   }
   if (password === config.dashboardPassword) {
     res.json({ success: true, token: config.dashboardPassword });
