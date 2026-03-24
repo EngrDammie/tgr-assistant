@@ -6,6 +6,7 @@
 
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
+const QRCode = require('qrcode');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,15 @@ const logger = require('./logger');
 const app = express();
 app.use(express.json());
 app.use(express.static('.'));
+
+// QR Code endpoint for browser display
+app.get('/api/qr', (req, res) => {
+  if (currentQR) {
+    res.json({ qr: currentQR });
+  } else {
+    res.json({ qr: null, message: 'No QR code available. Restart the bot to get a new one.' });
+  }
+});
 
 // Configuration
 const SESSION_DIR = path.join(__dirname, 'sessions');
@@ -102,21 +112,25 @@ const saveGroups = () => refreshData();
 const saveContent = () => refreshData();
 
 // WhatsApp Connection
+let currentQR = null;
+
 async function connectWA() {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   
   sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
     logger: pino({ level: 'silent' })
   });
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
+  sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
-      logger.info({ qr: true }, 'QR Code received. Scan with WhatsApp!');
+      currentQR = await QRCode.toDataURL(qr);
+      console.log('\n📱 SCAN THIS QR CODE WITH WHATSAPP:\n');
+      console.log(qr);
+      console.log('\n💡 Or open http://localhost:3000 in your browser to see the QR code\n');
     }
     if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode;
