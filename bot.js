@@ -119,7 +119,8 @@ async function connectWA() {
   
   sock = makeWASocket({
     auth: state,
-    logger: pino({ level: 'silent' })
+    logger: pino({ level: 'silent' }),
+    browser: 'Ubuntu' // Explicit browser
   });
 
   sock.ev.on('creds.update', saveCreds);
