@@ -8,6 +8,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const pino = require('pino');
 const QRCode = require('qrcode');
 const express = require('express');
+const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const cron = require('node-cron');
@@ -18,6 +19,7 @@ const db = require('./database');
 const logger = require('./logger');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
