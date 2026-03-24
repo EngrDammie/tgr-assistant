@@ -669,6 +669,15 @@
       </div>
     </div>
 
+    <!-- QR Code Section -->
+    <div id="qrSection" class="status-grid" style="display: none; margin-top: 20px;">
+      <div class="status-card" style="grid-column: 1 / -1; text-align: center;">
+        <h3 style="margin-bottom: 15px;">📱 Scan QR Code to Connect</h3>
+        <img id="qrImage" src="" alt="QR Code" style="max-width: 300px; border-radius: 12px;">
+        <p style="margin-top: 15px; color: var(--text-muted);">Open WhatsApp → Settings → Linked Devices → Link a Device</p>
+      </div>
+    </div>
+
     <!-- Navigation Tabs -->
     <nav class="nav-tabs">
       <button class="nav-tab active" onclick="showTab('broadcast', this)">
@@ -963,15 +972,29 @@
 
         const connIcon = document.getElementById('connectionIcon');
         const connStatus = document.getElementById('connectionStatus');
+        const qrSection = document.getElementById('qrSection');
         
         if (status.connected) {
           connIcon.className = 'status-icon online';
           connIcon.innerHTML = '<i class="fas fa-check"></i>';
           connStatus.textContent = 'Online';
+          qrSection.style.display = 'none';
         } else {
           connIcon.className = 'status-icon offline';
           connIcon.innerHTML = '<i class="fas fa-times"></i>';
-          connStatus.textContent = 'Offline';
+          connStatus.textContent = 'Offline - Scan QR to connect';
+          
+          // Fetch and display QR code
+          try {
+            const qrRes = await fetch(API_BASE + '/api/qr');
+            const qrData = await qrRes.json();
+            if (qrData.qr) {
+              document.getElementById('qrImage').src = qrData.qr;
+              qrSection.style.display = 'grid';
+            }
+          } catch (e) {
+            console.error('Failed to fetch QR:', e);
+          }
         }
 
         document.getElementById('groupCount').textContent = status.groups || 0;
