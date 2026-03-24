@@ -122,7 +122,8 @@ async function connectWA() {
   sock = makeWASocket({
     auth: state,
     logger: pino({ level: 'silent' }),
-    browser: 'Ubuntu' // Explicit browser
+    browser: ['TGR Assistant', 'Chrome', '110.0.5481.100'],
+    printQRInTerminal: false
   });
 
   sock.ev.on('creds.update', saveCreds);
