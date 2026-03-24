@@ -188,6 +188,37 @@ Or use the bot via WhatsApp - there's a settings option in the dashboard.
 | Messages not sending | Check bot shows "Online" in dashboard |
 | Forgot password | Ask admin to reset via config |
 | Nothing happens when I send commands | Make sure you set your admin number first |
+| Connection closed (405) | Delete the sessions folder and restart: `rm -rf sessions/` then `npm start` |
+
+---
+
+## 💾 How to Backup & Restore Your Session
+
+After scanning the QR code once, you can save your session. This way, you won't need to scan QR again if the bot restarts!
+
+### 1. Backup (After First Connection)
+
+**Option A: Download via Browser**
+1. Open: `http://localhost:3000/api/session/export`
+2. Save the JSON file to your computer (e.g., `session-backup.json`)
+
+**Option B: Via Command Line**
+```bash
+curl -o session-backup.json http://localhost:3000/api/session/export
+```
+
+### 2. Restore (When Needed)
+
+1. Copy `session-backup.json` to the `sessions/` folder
+2. Make sure the filename matches what the bot expects
+3. Restart: `npm start`
+
+No QR scanning needed!
+
+### ⚠️ Important Notes
+- The session file is in your `sessions/` folder
+- If you log out from WhatsApp Web, the session becomes invalid
+- If session expires, just delete `sessions/` folder and scan QR again
 
 ---
 
