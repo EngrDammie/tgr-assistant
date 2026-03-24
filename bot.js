@@ -5,6 +5,7 @@
  */
 
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const pino = require('pino');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -107,7 +108,7 @@ async function connectWA() {
   sock = makeWASocket({
     auth: state,
     printQRInTerminal: true,
-    logger: console
+    logger: pino({ level: 'silent' })
   });
 
   sock.ev.on('creds.update', saveCreds);
